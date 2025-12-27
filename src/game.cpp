@@ -20,6 +20,11 @@ Game::Game(bool debug) : map(80, 20), debug_mode(debug) {
     sol::protected_function start_cfg_func = scripts.lua["get_start_config"];
     sol::table start_config = start_cfg_func();
 
+    // NEW: Apply window size from Lua
+    int w = start_config["window_width"].get_or(80);
+    int h = start_config["window_height"].get_or(24);
+    renderer.set_window_size(w, h);
+
     scripts.discover_assets();
     get_player_setup();
 
@@ -240,12 +245,10 @@ void Game::render() {
         renderer.draw_dungeon(map, reg, log, reg.player_id, depth, wc, fc);
     }
     else if (state == GameState::Inventory) {
-        // Pass log and dimensions to match dungeon view
-        renderer.draw_inventory(inventory, log, map.width, map.height);
+        renderer.draw_inventory(inventory, log);
     }
     else if (state == GameState::Stats) {
-        // Pass log and dimensions to match dungeon view
-        renderer.draw_stats(reg, reg.player_id, reg.player_name, log, map.width, map.height);
+        renderer.draw_stats(reg, reg.player_id, reg.player_name, log);
     }
 
     renderer.refresh_screen();

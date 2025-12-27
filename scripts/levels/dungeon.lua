@@ -1,20 +1,20 @@
 -- scripts/levels/dungeon.lua
 function get_level_config(depth)
     return {
-        name = "Whispering Woods",
-        width = 80,
-        height = 20,
+        name = "Deep Dungeon",
+        width = 120, -- Test Scrolling: Larger than standard 80 width
+        height = 40, -- Test Scrolling: Larger than standard 24 height
         wall_color = Wall,
         floor_color = Default,
         is_boss_level = (depth % 3 == 0)
     }
 end
+
 function get_next_level(depth)
-    -- Logic to decide where the stairs lead
     if depth % 3 == 0 then
-        return "scripts/levels/forest.lua" -- After boss, go to forest
+        return "scripts/levels/forest.lua"
     else
-        return "scripts/levels/dungeon.lua" -- Keep going deeper
+        return "scripts/levels/dungeon.lua"
     end
 end
 
@@ -32,6 +32,6 @@ end
 function get_loot_odds(depth)
     return {
         ["scripts/items/healing_potion.lua"] = 80,
-        ["scripts/items/strength_elixir.lua"] = 20
+        ["scripts/items/strength_potion.lua"] = 20
     }
 end

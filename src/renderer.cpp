@@ -2,6 +2,7 @@
 #include <ncurses.h>
 #include <locale.h>
 #include <filesystem>
+#include <algorithm>
 
 namespace fs = std::filesystem;
 
@@ -12,10 +13,20 @@ Renderer::Renderer() {
     noecho();
     curs_set(0);
     keypad(stdscr, TRUE);
+
+    // Default fallback
+    getmaxyx(stdscr, screen_height, screen_width);
 }
 
 Renderer::~Renderer() {
     endwin();
+}
+
+void Renderer::set_window_size(int w, int h) {
+    screen_width = w;
+    screen_height = h;
+    // Optional: Resize the actual terminal window if the emulator supports it
+    // resizeterm(h, w);
 }
 
 void Renderer::init_colors(ScriptEngine& scripts) {
@@ -47,8 +58,15 @@ void Renderer::show_error(const std::string& msg) {
     getch();
 }
 
-void Renderer::draw_borders(int w, int h) {
+int Renderer::clamp(int val, int min, int max) {
+    if (val < min) return min;
+    if (val > max) return max;
+    return val;
+}
+
+void Renderer::draw_borders(int w, int h, int separator_y) {
     attron(COLOR_PAIR(0) | A_BOLD);
+
     mvaddch(0, 0, ACS_ULCORNER);
     mvaddch(0, w + 1, ACS_URCORNER);
     mvaddch(h + 1, 0, ACS_LLCORNER);
@@ -57,7 +75,6 @@ void Renderer::draw_borders(int w, int h) {
     for (int x = 1; x <= w; ++x) {
         mvaddch(0, x, ACS_HLINE);
         mvaddch(h + 1, x, ACS_HLINE);
-        mvaddch(h - 4, x, ACS_HLINE);
     }
 
     for (int y = 1; y <= h; ++y) {
@@ -65,16 +82,20 @@ void Renderer::draw_borders(int w, int h) {
         mvaddch(y, w + 1, ACS_VLINE);
     }
 
-    mvaddch(h - 4, 0, ACS_LTEE);
-    mvaddch(h - 4, w + 1, ACS_RTEE);
+    if (separator_y > 0 && separator_y < h) {
+        mvaddch(separator_y, 0, ACS_LTEE);
+        mvaddch(separator_y, w + 1, ACS_RTEE);
+        for (int x = 1; x <= w; ++x) {
+            mvaddch(separator_y, x, ACS_HLINE);
+        }
+    }
+
     attroff(COLOR_PAIR(0) | A_BOLD);
 }
 
 void Renderer::draw_log(const MessageLog& log, int start_y, int max_row, int max_col) {
-    int max_y, max_x;
-    getmaxyx(stdscr, max_y, max_x);
-
-    int limit_y = (max_row < max_y) ? max_row : max_y;
+    // We trust the passed limits, which are now derived from screen_width/height
+    int limit_y = max_row;
     int visible_lines = limit_y - start_y + 1;
 
     if (visible_lines <= 0) return;
@@ -89,62 +110,114 @@ void Renderer::draw_log(const MessageLog& log, int start_y, int max_row, int max
     for (int i = start_index; i < msg_count; ++i) {
         if (draw_y > limit_y) break;
         wmove(stdscr, draw_y, 2);
+
         int available_width = max_col - 2;
+
         std::string txt = log.messages[i].text;
-        if ((int)txt.length() > available_width - 2) {
-            txt = txt.substr(0, available_width - 2);
+        if ((int)txt.length() > available_width) {
+            txt = txt.substr(0, available_width);
         }
+
         attron(COLOR_PAIR(static_cast<short>(log.messages[i].color)));
         printw("> %s", txt.c_str());
         attroff(COLOR_PAIR(static_cast<short>(log.messages[i].color)));
 
-        // Clear rest of the line
         int cx, cy;
         getyx(stdscr, cy, cx);
-        while (cx <= max_col) { addch(' '); cx++; }
+        while (cx < max_col) { addch(' '); cx++; }
+
         draw_y++;
     }
 }
 
 void Renderer::draw_dungeon(const Dungeon& map, const Registry& reg, const MessageLog& log,
                             int player_id, int depth, int wall_color, int floor_color) {
-    int ui_width = map.width;
-    int ui_height = map.height + 7;
-    draw_borders(ui_width, ui_height);
+    // USE CONFIGURED DIMENSIONS
+    int max_y = screen_height;
+    int max_x = screen_width;
+
+    int log_height = 6;
+    int stats_lines = 1;
+
+    int ui_overhead = 2 + log_height + 1 + stats_lines;
+
+    int max_map_h = max_y - ui_overhead;
+    int max_map_w = max_x - 2;
+
+    // Viewport fills the configured window size
+    int view_w = max_map_w;
+    int view_h = max_map_h;
+
+    int frame_h = view_h + 1 + 1 + log_height;
+
+    // Safety clamp only if calculated frame exceeds configured height
+    if (frame_h > max_y - 2) frame_h = max_y - 2;
+
+    Position p = {0,0};
+    if (reg.positions.count(player_id)) p = reg.positions.at(player_id);
+
+    int cam_x, cam_y;
+
+    if (map.width < view_w) {
+        cam_x = -(view_w - map.width) / 2;
+    } else {
+        cam_x = p.x - (view_w / 2);
+        cam_x = clamp(cam_x, 0, map.width - view_w);
+    }
+
+    if (map.height < view_h) {
+        cam_y = -(view_h - map.height) / 2;
+    } else {
+        cam_y = p.y - (view_h / 2);
+        cam_y = clamp(cam_y, 0, map.height - view_h);
+    }
+
+    draw_borders(view_w, frame_h, view_h + 2);
 
     int wall_pair = wall_color;
     int floor_pair = floor_color;
 
-    for (int y = 0; y < map.height; ++y) {
-        for (int x = 0; x < map.width; ++x) {
-            if (map.visible_tiles.count({x, y})) {
-                attron(COLOR_PAIR(map.grid[y][x] == '#' ? wall_pair : floor_pair));
-                mvaddch(y + 1, x + 1, map.grid[y][x]);
-                attroff(COLOR_PAIR(map.grid[y][x] == '#' ? wall_pair : floor_pair));
-            } else if (map.explored[y][x]) {
+    for (int vy = 0; vy < view_h; ++vy) {
+        for (int vx = 0; vx < view_w; ++vx) {
+            int wx = cam_x + vx;
+            int wy = cam_y + vy;
+
+            if (wx < 0 || wx >= map.width || wy < 0 || wy >= map.height) continue;
+
+            if (map.visible_tiles.count({wx, wy})) {
+                attron(COLOR_PAIR(map.grid[wy][wx] == '#' ? wall_pair : floor_pair));
+                mvaddch(vy + 1, vx + 1, map.grid[wy][wx]);
+                attroff(COLOR_PAIR(map.grid[wy][wx] == '#' ? wall_pair : floor_pair));
+            } else if (map.explored[wy][wx]) {
                 attron(COLOR_PAIR(8));
-                mvaddch(y + 1, x + 1, map.grid[y][x]);
+                mvaddch(vy + 1, vx + 1, map.grid[wy][wx]);
                 attroff(COLOR_PAIR(8));
             }
         }
     }
 
     for (auto const& [id, r] : reg.renderables) {
-        Position p = reg.positions.at(id);
-        if (id == player_id || map.visible_tiles.count(p)) {
-            attron(COLOR_PAIR((short)r.color));
-            mvaddch(p.y + 1, p.x + 1, r.glyph);
-            attroff(COLOR_PAIR((short)r.color));
+        if (!reg.positions.count(id)) continue;
+        Position pos = reg.positions.at(id);
+
+        if (pos.x >= cam_x && pos.x < cam_x + view_w &&
+            pos.y >= cam_y && pos.y < cam_y + view_h) {
+
+            if (id == player_id || map.visible_tiles.count(pos)) {
+                attron(COLOR_PAIR((short)r.color));
+                mvaddch((pos.y - cam_y) + 1, (pos.x - cam_x) + 1, r.glyph);
+                attroff(COLOR_PAIR((short)r.color));
+            }
         }
     }
 
     if (reg.stats.contains(player_id)) {
         auto s = reg.stats.at(player_id);
-        mvprintw(map.height + 2, 2, "HP: %d/%d | MP: %d/%d | Depth: %d | [I]nv [C]har",
+        mvprintw(view_h + 1, 2, "HP: %d/%d | MP: %d/%d | Depth: %d",
                  s.hp, s.max_hp, s.mana, s.max_mana, depth);
     }
 
-    draw_log(log, map.height + 4, ui_height, ui_width);
+    draw_log(log, view_h + 3, view_h + 2 + log_height, view_w + 1);
 }
 
 void Renderer::animate_projectile(int x, int y, char glyph, ColorPair color) {
@@ -155,11 +228,15 @@ void Renderer::animate_projectile(int x, int y, char glyph, ColorPair color) {
     napms(50);
 }
 
-// UPDATED: Now draws borders and log
-void Renderer::draw_inventory(const std::vector<ItemTag>& inventory, const MessageLog& log, int width, int height) {
-    int ui_width = width;
-    int ui_height = height + 7;
-    draw_borders(ui_width, ui_height);
+void Renderer::draw_inventory(const std::vector<ItemTag>& inventory, const MessageLog& log) {
+    // Use configured dimensions
+    int ui_width = screen_width - 2;
+    int ui_height = screen_height - 2;
+
+    int log_height = 6;
+    int separator_y = ui_height - log_height - 1;
+
+    draw_borders(ui_width, ui_height, separator_y);
 
     attron(A_BOLD);
     mvprintw(2, 4, "--- INVENTORY ---");
@@ -169,21 +246,24 @@ void Renderer::draw_inventory(const std::vector<ItemTag>& inventory, const Messa
         mvprintw(4, 6, "(Empty)");
     } else {
         for (size_t i = 0; i < inventory.size(); ++i) {
-            // Ensure we don't overflow into the log area or stats line
-            if (4 + i >= (size_t)height + 2) break;
+            if (4 + i >= (size_t)separator_y - 1) break;
             mvprintw(4 + i, 6, "[%zu] %s", i + 1, inventory[i].name.c_str());
         }
     }
 
-    mvprintw(height + 2, 2, "[1-9] Use Item | [I/ESC] Close Inventory");
-    draw_log(log, height + 4, ui_height, ui_width);
+    mvprintw(separator_y - 1, 2, "[1-9] Use Item | [I/ESC] Close");
+    draw_log(log, separator_y + 1, ui_height, ui_width + 1);
 }
 
-// UPDATED: Now draws borders and log
-void Renderer::draw_stats(const Registry& reg, int player_id, std::string player_name, const MessageLog& log, int width, int height) {
-    int ui_width = width;
-    int ui_height = height + 7;
-    draw_borders(ui_width, ui_height);
+void Renderer::draw_stats(const Registry& reg, int player_id, std::string player_name, const MessageLog& log) {
+    // Use configured dimensions
+    int ui_width = screen_width - 2;
+    int ui_height = screen_height - 2;
+
+    int log_height = 6;
+    int separator_y = ui_height - log_height - 1;
+
+    draw_borders(ui_width, ui_height, separator_y);
 
     if (!reg.stats.contains(player_id)) return;
     auto s = reg.stats.at(player_id);
@@ -200,8 +280,8 @@ void Renderer::draw_stats(const Registry& reg, int player_id, std::string player
     mvprintw(10, 6,"Damage: %d", s.damage);
     mvprintw(11, 6,"FOV:    %d", s.fov_range);
 
-    mvprintw(height + 2, 2, "[C/ESC] Close Stats");
-    draw_log(log, height + 4, ui_height, ui_width);
+    mvprintw(separator_y - 1, 2, "[C/ESC] Close");
+    draw_log(log, separator_y + 1, ui_height, ui_width + 1);
 }
 
 void Renderer::draw_character_creation_header() {

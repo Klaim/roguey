@@ -19,6 +19,8 @@ function get_start_config()
     return {
         start_level = "scripts/levels/forest.lua",
         start_depth = 1,
-        initial_log_message = "Engine ready. Auto-ID Color bridge active."
+        initial_log_message = "Welcome adventurer !",
+        window_width = 80,
+        window_height = 24
     }
 end
