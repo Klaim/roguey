@@ -42,11 +42,7 @@ void Systems::attack(Registry& reg, EntityID a_id, EntityID d_id, MessageLog& lo
       reg.stats[a_id].xp += 50;
       check_level_up(reg, log, lua);
     }
-    else if (d_id == reg.player_id)
-    {
-      // NEW: Requested death log
-      log.add(d_name + " was defeated by the " + a_name, "ui_emphasis");
-    }
+    else if (d_id == reg.player_id) { log.add(d_name + " was defeated by the " + a_name, "ui_emphasis"); }
     reg.destroy_entity(d_id);
   }
 }

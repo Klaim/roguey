@@ -1,9 +1,29 @@
 #include "script_engine.hpp"
+#include "systems.hpp"
 #include <filesystem>
 
 namespace fs = std::filesystem;
 
-ScriptEngine::ScriptEngine() {}
+ScriptEngine::ScriptEngine(std::string const& main_script)
+{
+  init_lua();
+  if (!load_script(main_script))
+  {
+    is_valid = false;
+    return;
+  }
+
+  // Retrieve list of global options
+  discover_assets();
+
+  // Global log in LUA
+  lua.new_usertype<MessageLog>("Log", "add", [](MessageLog& l, std::string const& msg) { l.add(msg, "ui_default"); });
+
+  sol::protected_function start_cfg_func = lua["get_start_config"];
+  configuration = start_cfg_func();
+
+  is_valid = true;
+}
 
 void ScriptEngine::init_lua()
 {

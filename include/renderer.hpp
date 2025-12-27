@@ -10,14 +10,13 @@
 class Renderer
 {
 public:
-  int screen_width = 80;
-  int screen_height = 24;
+  int screen_width;
+  int screen_height;
 
   Renderer();
   ~Renderer();
 
-  void init_colors(ScriptEngine& scripts);
-  void set_window_size(int w, int h);
+  void setup_window(ScriptEngine& scripts);
   void clear_screen();
   void refresh_screen();
   void show_error(std::string const& msg);
@@ -41,10 +40,7 @@ public:
 
   void draw_inventory(std::vector<ItemTag> const& inventory, MessageLog const& log);
   void draw_stats(Registry const& reg, int player_id, std::string player_name, MessageLog const& log);
-
-  // Added draw_help
   void draw_help(MessageLog const& log, std::string const& help_text);
-
   void draw_character_creation_header(MessageLog const& log);
   void draw_class_selection(std::vector<std::string> const& class_paths, int selection, MessageLog const& log);
 
@@ -53,6 +49,7 @@ public:
 
 private:
   int clamp(int val, int min, int max);
+  void set_window_size(int w, int h);
   int last_cam_x = 0;
   int last_cam_y = 0;
   sol::state* lua_state = nullptr;

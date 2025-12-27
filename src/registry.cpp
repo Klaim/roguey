@@ -9,7 +9,7 @@ void Registry::destroy_entity(EntityID id)
   stats.erase(id);
   script_paths.erase(id);
   monster_types.erase(id);
-  names.erase(id); // NEW
+  names.erase(id);
 
   auto it = std::find(monsters.begin(), monsters.end(), id);
   if (it != monsters.end()) monsters.erase(it);

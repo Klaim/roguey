@@ -8,32 +8,20 @@
 
 namespace fs = std::filesystem;
 
-Game::Game(bool debug) : map(80, 20), debug_mode(debug)
+Game::Game(bool debug) : map(80, 20), debug_mode(debug), scripts{"scripts/game.lua"}
 {
-  scripts.init_lua();
-
-  if (!scripts.load_script("scripts/game.lua"))
+  if (!scripts.is_valid)
   {
     renderer.show_error("Failed to load 'scripts/game.lua'.\nCheck that the file exists and is valid.");
     exit(1);
   }
 
-  renderer.init_colors(scripts);
+  renderer.setup_window(scripts);
 
-  scripts.lua.new_usertype<MessageLog>("Log", "add", [](MessageLog& l, std::string msg) { l.add(msg, "ui_default"); });
-
-  sol::protected_function start_cfg_func = scripts.lua["get_start_config"];
-  sol::table start_config = start_cfg_func();
-
-  int w = start_config["window_width"].get_or(80);
-  int h = start_config["window_height"].get_or(24);
-  renderer.set_window_size(w, h);
-
-  scripts.discover_assets();
   get_player_setup();
 
-  std::string first_level = start_config["start_level"];
-  log.add(start_config["initial_log_message"]);
+  std::string first_level = scripts.configuration["start_level"];
+  log.add(scripts.configuration["initial_log_message"]);
   reset(true, first_level);
 }
 
@@ -121,7 +109,7 @@ bool Game::spawn_monster(int x, int y, std::string script_path)
   {
     sol::error err = result;
     log.add("Lua Error in " + script_path + ": " + std::string(err.what()), "ui_emphasis");
-    reg.destroy_entity(id); // Cleanup
+    reg.destroy_entity(id);
     return false;
   }
 
@@ -201,14 +189,12 @@ void Game::reset(bool full_reset, std::string level_script)
   {
     spawn_monster(map.rooms.back().center().x, map.rooms.back().center().y, scripts.lua["get_boss_script"](depth));
   }
-  else
-  {
-    EntityID stairs = reg.create_entity();
-    reg.positions[stairs] = map.rooms.back().center();
-    reg.renderables[stairs] = {'>', renderer.get_color("ui_gold")};
-    reg.items[stairs] = {ItemType::Stairs, 0, next_level_path, ""};
-    reg.names[stairs] = "Stairs";
-  }
+
+  EntityID stairs = reg.create_entity();
+  reg.positions[stairs] = map.rooms.back().center();
+  reg.renderables[stairs] = {'>', renderer.get_color("ui_gold")};
+  reg.items[stairs] = {ItemType::Stairs, 0, next_level_path, ""};
+  reg.names[stairs] = "Stairs";
 
   sol::table monster_weights = scripts.lua["get_spawn_odds"](depth);
   sol::table item_weights = scripts.lua["get_loot_odds"](depth);
@@ -359,7 +345,6 @@ void Game::process_input()
     }
   }
   else if (state == game_state::Inventory) { handle_input_inventory(ch); }
-  // game_state::Help consumes input (ESC check above covers exit), so nothing else needed here.
 }
 
 void Game::render()

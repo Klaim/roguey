@@ -10,9 +10,9 @@ class Game
 {
   Registry reg;
   Dungeon map;
+  Renderer renderer;
   MessageLog log;
   ScriptEngine scripts;
-  Renderer renderer; // The new renderer
 
   bool running = true;
   bool debug_mode = false;

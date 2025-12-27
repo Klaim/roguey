@@ -3,7 +3,7 @@
 #include <filesystem>
 #include <locale.h>
 #include <ncurses.h>
-#include <sstream> // Added for stringstream
+#include <sstream>
 
 namespace fs = std::filesystem;
 
@@ -37,8 +37,9 @@ int Renderer::get_color(std::string const& name, int def) const
   return COLOR_PAIR(def);
 }
 
-void Renderer::init_colors(ScriptEngine& scripts)
+void Renderer::setup_window(ScriptEngine& scripts)
 {
+  // Process the color table
   this->lua_state = &scripts.lua;
   sol::table color_table = scripts.lua["game_colors"];
   for (size_t i = 1; i <= color_table.size(); ++i)
@@ -53,6 +54,11 @@ void Renderer::init_colors(ScriptEngine& scripts)
 
     scripts.lua[entry[4]] = final_attr;
   }
+
+  // Setup the windows display
+  int w = scripts.configuration["window_width"].get_or(80);
+  int h = scripts.configuration["window_height"].get_or(48);
+  set_window_size(w, h);
 }
 
 void Renderer::clear_screen()
@@ -345,7 +351,6 @@ void Renderer::draw_help(MessageLog const& log, std::string const& help_text)
 
   draw_borders(0, 0, ui_width, ui_height, "HELP", separator_y);
 
-  // Parse and print line by line
   int start_y = 4;
   int start_x = 6;
 

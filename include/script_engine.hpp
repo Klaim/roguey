@@ -8,7 +8,6 @@
 #pragma once
 #include "registry.hpp"
 #include "sol/sol.hpp"
-#include "types.hpp"
 #include <random>
 #include <string>
 #include <vector>
@@ -17,12 +16,16 @@ class ScriptEngine
 {
 public:
   sol::state lua;
+  sol::table configuration;
+  bool is_valid;
   std::vector<std::string> class_templates;
 
-  ScriptEngine();
+  ScriptEngine(std::string const& main_script);
 
-  void init_lua();
-  void discover_assets();
   bool load_script(std::string const& path);
   std::string pick_from_weights(sol::table weights, std::mt19937& gen);
+
+private:
+  void init_lua();
+  void discover_assets();
 };
