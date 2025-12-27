@@ -21,12 +21,12 @@ public:
     void animate_projectile(int x, int y, char glyph, ColorPair color);
 
     void draw_log(const MessageLog& log, int start_y, int max_row, int max_col);
-    void draw_dungeon ( const Dungeon& map, const Registry& reg, const MessageLog& log
-                      , int player_id, int depth, int wall_color, int floor_color
-                      );
     void draw_borders(int width, int height);
-    void draw_inventory(const std::vector<ItemTag>& inventory);
-    void draw_stats(const Registry& reg, int player_id, std::string player_name);
+
+    void draw_dungeon(const Dungeon& map, const Registry& reg, const MessageLog& log,
+                      int player_id, int depth, int wall_color, int floor_color);
+    void draw_inventory(const std::vector<ItemTag>& inventory, const MessageLog& log, int width, int height);
+    void draw_stats(const Registry& reg, int player_id, std::string player_name, const MessageLog& log, int width, int height);
 
     void draw_character_creation_header();
     void draw_class_selection(const std::vector<std::string>& class_paths, int selection);

@@ -8,8 +8,6 @@ namespace fs = std::filesystem;
 
 Game::Game(bool debug) : map(80, 20), debug_mode(debug) {
     scripts.init_lua();
-
-    // 1. Bind MessageLog (so 'log:add' works)
     scripts.lua.new_usertype<MessageLog>("Log", "add", [](MessageLog& l, std::string msg) { l.add(msg, ColorPair::Default); });
 
     if (!scripts.load_script("scripts/game.lua")) {
@@ -34,22 +32,15 @@ Game::~Game()
 {}
 
 void Game::get_player_setup() {
-    // Switch to input mode (echo on, cursor visible)
     echo(); curs_set(1);
-
     renderer.draw_character_creation_header();
-
     char name_buf[32]; getnstr(name_buf, 31);
     reg.player_name = std::string(name_buf).empty() ? "Hero" : name_buf;
-
-    // Switch back to game mode (echo off, cursor hidden)
     noecho(); curs_set(0);
 
     int selection = 0;
     while (true) {
-        // Delegate drawing the selection menu to renderer
         renderer.draw_class_selection(scripts.class_templates, selection);
-
         int ch = getch();
         if (ch == KEY_UP && selection > 0) selection--;
         if (ch == KEY_DOWN && selection < (int)scripts.class_templates.size() - 1) selection++;
@@ -72,22 +63,17 @@ void Game::spawn_item(int x, int y, std::string script_path) {
 
 void Game::spawn_monster(int x, int y, std::string script_path) {
     if (!scripts.load_script(script_path)) return;
-
     EntityID id = reg.create_entity();
     reg.positions[id] = {x, y};
     reg.script_paths[id] = script_path;
     reg.monsters.push_back(id);
-
     sol::protected_function init_func = scripts.lua["get_init_stats"];
     sol::table s = init_func();
     reg.stats[id] = { s["hp"], s["hp"], 0, 0, s["damage"], 0, 1, 0 };
-
     std::string glyph_str = s["glyph"].get<std::string>();
     char glyph = glyph_str.empty() ? '?' : glyph_str[0];
-
     int cid = s["color"].get<int>();
     reg.renderables[id] = { glyph, static_cast<ColorPair>(cid == 0 ? 1 : cid) };
-
     std::string m_type = s["type"];
     if (m_type == "boss") reg.boss_id = id;
 }
@@ -102,7 +88,6 @@ void Game::reset(bool full_reset, std::string level_script) {
         inventory.clear();
         last_dx = 1; last_dy = 0;
     }
-
     if (!level_script.empty()) current_level_script = level_script;
 
     reg.positions.clear();
@@ -152,7 +137,6 @@ void Game::reset(bool full_reset, std::string level_script) {
     sol::table item_weights = scripts.lua["get_loot_odds"](depth);
 
     std::map<std::string, int> spawn_counts;
-
     for (size_t i = 1; i < map.rooms.size() - 1; ++i) {
         Position c = map.rooms[i].center();
         int roll = std::uniform_int_distribution<>(0, 10)(gen);
@@ -175,7 +159,6 @@ void Game::reset(bool full_reset, std::string level_script) {
         }
         log.add(debug_msg, ColorPair::Gold);
     }
-
     map.update_fov(reg.positions[reg.player_id].x, reg.positions[reg.player_id].y, 8);
 }
 
@@ -186,7 +169,6 @@ void Game::run() {
                 sol::table config = scripts.lua["get_start_config"]();
                 std::string start_level = config["start_level"];
                 log.add(config["initial_log_message"]);
-
                 reset(true, start_level);
                 continue;
             } else break;
@@ -222,11 +204,7 @@ void Game::process_input() {
         }
 
         if (acted) {
-            if (dx != 0 || dy != 0) {
-                last_dx = dx;
-                last_dy = dy;
-            }
-
+            if (dx != 0 || dy != 0) { last_dx = dx; last_dy = dy; }
             Position& p = reg.positions[reg.player_id];
             EntityID target = Systems::get_entity_at(reg, p.x + dx, p.y + dy);
 
@@ -259,14 +237,15 @@ void Game::render() {
         sol::table config = scripts.lua["get_level_config"](depth);
         int wc = config["wall_color"].get_or(4);
         int fc = config["floor_color"].get_or(1);
-
         renderer.draw_dungeon(map, reg, log, reg.player_id, depth, wc, fc);
     }
     else if (state == GameState::Inventory) {
-        renderer.draw_inventory(inventory);
+        // Pass log and dimensions to match dungeon view
+        renderer.draw_inventory(inventory, log, map.width, map.height);
     }
     else if (state == GameState::Stats) {
-        renderer.draw_stats(reg, reg.player_id, reg.player_name);
+        // Pass log and dimensions to match dungeon view
+        renderer.draw_stats(reg, reg.player_id, reg.player_name, log, map.width, map.height);
     }
 
     renderer.refresh_screen();
@@ -279,18 +258,12 @@ void Game::handle_input_inventory(int ch) {
             auto& item = inventory[idx];
             if (scripts.load_script(item.script)) {
                 sol::protected_function on_use = scripts.lua["on_use"];
-
-                // FIXED: Capture the result and check for errors
                 auto use_res = on_use(reg.stats[reg.player_id], log);
 
                 if (use_res.valid()) {
-                    bool keep_item = false;
-                    // Optional: If lua returns true/false, we could decide to keep item?
-                    // For now, we assume use = consume.
                     inventory.erase(inventory.begin() + idx);
                     state = GameState::Dungeon;
                 } else {
-                    // CRITICAL: Print Lua error if potion fails
                     sol::error err = use_res;
                     log.add("Script Error: " + std::string(err.what()), ColorPair::Orc);
                 }
@@ -302,7 +275,6 @@ void Game::handle_input_inventory(int ch) {
 bool Game::handle_game_over() {
     flushinp();
     renderer.draw_game_over();
-
     while (true) {
         int choice = getch();
         if (choice == 'r' || choice == 'R') return true;
@@ -313,7 +285,6 @@ bool Game::handle_game_over() {
 bool Game::handle_victory() {
     flushinp();
     renderer.draw_victory();
-
     while (true) {
         int choice = getch();
         if (choice == 'c' || choice == 'C') return true;
