@@ -38,9 +38,9 @@ void ScriptEngine::init_lua()
 
   // Register basic types
   lua.new_usertype<Position>("Position", "x", &Position::x, "y", &Position::y);
-  lua.new_usertype<Stats>("Stats", "hp", &Stats::hp, "max_hp", &Stats::max_hp, "mana", &Stats::mana, "max_mana",
-                          &Stats::max_mana, "damage", &Stats::damage, "xp", &Stats::xp, "level", &Stats::level, "fov",
-                          &Stats::fov_range);
+  lua.new_usertype<Stats>("Stats", "archetype", &Stats::archetype, "hp", &Stats::hp, "max_hp", &Stats::max_hp, "mana",
+                          &Stats::mana, "max_mana", &Stats::max_mana, "damage", &Stats::damage, "xp", &Stats::xp,
+                          "level", &Stats::level, "gold", &Stats::gold, "fov", &Stats::fov_range);
 }
 
 void ScriptEngine::discover_assets()

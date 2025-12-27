@@ -338,13 +338,15 @@ void Renderer::draw_stats(Registry const& reg, int player_id, std::string player
   if (!reg.stats.contains(player_id)) return;
   auto s = reg.stats.at(player_id);
 
-  mvprintw(4, 6, "Name:   %s", player_name.c_str());
+  mvprintw(3, 6, "Name:   %s", player_name.c_str());
+  mvprintw(4, 6, "Class:  %s", s.archetype.c_str());
   mvprintw(5, 6, "Level:  %d", s.level);
   mvprintw(6, 6, "XP:     %d", s.xp);
   mvprintw(8, 6, "HP:     %d / %d", s.hp, s.max_hp);
   mvprintw(9, 6, "Mana:   %d / %d", s.mana, s.max_mana);
   mvprintw(10, 6, "Damage: %d", s.damage);
   mvprintw(11, 6, "FOV:    %d", s.fov_range);
+  mvprintw(12, 6, "Gold:   %d", s.gold);
 
   mvprintw(separator_y - 1, 2, "[C/ESC] Close");
   draw_log(log, separator_y + 1, ui_height, ui_width + 1);

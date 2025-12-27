@@ -7,11 +7,17 @@
 item_data = {
     name = "Strength Elixir",
     glyph = "!",
-    color = item_dmg_potion
+    color = item_dmg_potion,
+    kind = "consumable"
 }
 
 function on_use(stats, log)
     stats.damage = stats.damage + 2
     log:add("Your muscles bulge! Damage increased!")
+    return true
+end
+
+function on_pick(stats, log)
+    log:add("You picked up a Strength Elixir")
     return true
 end

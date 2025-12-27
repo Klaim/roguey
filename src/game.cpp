@@ -90,7 +90,12 @@ void Game::spawn_item(int x, int y, std::string script_path)
   int cid = data["color"].get_or(COLOR_PAIR(1));
   reg.renderables[id] = {glyph_str[0], cid};
 
-  reg.items[id] = {ItemType::Consumable, 0, data["name"], script_path};
+  ItemType kind;
+  std::string item_kind = data["kind"];
+  if (item_kind == "consumable") kind = ItemType::Consumable;
+  else if (item_kind == "gold") kind = ItemType::Gold;
+
+  reg.items[id] = {kind, 0, data["name"], script_path};
   reg.names[id] = data["name"];
 }
 
@@ -122,7 +127,7 @@ bool Game::spawn_monster(int x, int y, std::string script_path)
   }
 
   sol::table s = result;
-  reg.stats[id] = {s["hp"], s["hp"], 0, 0, s["damage"], 0, 1, 0};
+  reg.stats[id] = {s["type"], s["hp"], s["hp"], 0, 0, s["damage"], 0, 1, 0};
 
   std::string glyph_str = s["glyph"].get<std::string>();
   char glyph = glyph_str.empty() ? '?' : glyph_str[0];
@@ -185,7 +190,7 @@ void Game::reset(bool full_reset, std::string level_script)
     scripts.load_script(reg.player_class_script);
     sol::protected_function init_func = scripts.lua["get_init_stats"];
     sol::table s = init_func();
-    reg.stats[reg.player_id] = {s["hp"], s["hp"], s["mp"], s["mp"], s["damage"], 0, 1, 8};
+    reg.stats[reg.player_id] = {s["archetype"], s["hp"], s["hp"], s["mp"], s["mp"], s["damage"], 0, 1, 8};
   }
   else { reg.stats[reg.player_id] = saved_stats; }
 
@@ -341,8 +346,10 @@ void Game::process_input()
               reset(false, reg.items[target].name);
               return;
             }
-            inventory.push_back(reg.items[target]);
-            log.add("Picked up " + reg.items[target].name);
+
+            // on_pick returns true if the item is stored in the inventory
+            if (scripts.lua["on_pick"](reg.stats[reg.player_id], log)) { inventory.push_back(reg.items[target]); }
+
             reg.destroy_entity(target);
           }
         }

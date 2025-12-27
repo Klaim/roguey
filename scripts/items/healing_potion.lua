@@ -7,8 +7,14 @@
 item_data = {
     name = "Healing Potion",
     glyph = "!",
-    color = item_hp_potion
+    color = item_hp_potion,
+    kind = "consumable"
 }
+
+function on_pick(stats, log)
+    log:add("You picked up a Healing Potion")
+    return true
+end
 
 function on_use(stats, log)
     local heal_amount = 20

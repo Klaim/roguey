@@ -5,7 +5,7 @@
 --==================================================================================================
 
 function get_init_stats()
-    return { hp = 150, mp = 10, damage = 15 }
+    return { archetype = "Warrior", hp = 150, mp = 10, damage = 15 }
 end
 
 function level_up(stats)

@@ -23,8 +23,9 @@ game_colors = {
   , { 5, 0, false, "entity_boss" }
   , { 2, 3, true , "entity_slime" }
 -- ITEMS
+  , { 3, 0, true , "item_gold"      }
   , { 1, 0, true , "item_hp_potion" }
-  , { 5, 0, false, "item_dmg_potion" }
+  , { 5, 0, false, "item_dmg_potion"}
 -- FX COLOR
   , { 4, 0, true , "fx_fire" }
 }

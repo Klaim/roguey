@@ -7,10 +7,12 @@
 //==================================================================================================
 #pragma once
 #include <cstdint>
+#include <string>
 
 using EntityID = std::uint32_t;
 
 struct Stats
 {
-  int hp, max_hp, mana, max_mana, damage, xp, level, fov_range;
+  std::string archetype;
+  int hp, max_hp, mana, max_mana, damage, xp, level, fov_range, gold;
 };

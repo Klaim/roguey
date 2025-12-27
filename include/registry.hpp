@@ -32,7 +32,6 @@ struct Registry
   EntityID boss_id = 0;
   std::string player_name = "Hero";
   std::string player_class_script = "";
-  int player_gold = 0;
   EntityID next_id = 1;
 
   EntityID create_entity() { return next_id++; }
