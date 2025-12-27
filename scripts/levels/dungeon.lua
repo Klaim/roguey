@@ -2,8 +2,8 @@
 function get_level_config(depth)
     return {
         name = "Deep Dungeon",
-        width = 120, -- Test Scrolling: Larger than standard 80 width
-        height = 40, -- Test Scrolling: Larger than standard 24 height
+        width = 120,
+        height = 40,
         wall_color = Wall,
         floor_color = Default,
         is_boss_level = (depth % 3 == 0)

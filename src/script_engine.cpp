@@ -17,12 +17,6 @@ void ScriptEngine::init_lua()
   lua.new_usertype<Stats>("Stats", "hp", &Stats::hp, "max_hp", &Stats::max_hp, "mana", &Stats::mana, "max_mana",
                           &Stats::max_mana, "damage", &Stats::damage, "xp", &Stats::xp, "level", &Stats::level, "fov",
                           &Stats::fov_range);
-
-  lua.new_enum<ColorPair>("ColorPair", {
-                                         {"Default", ColorPair::Default},
-                                         {"Player", ColorPair::Player},
-                                         {"Wall", ColorPair::Wall},
-                                       });
 }
 
 void ScriptEngine::discover_assets()

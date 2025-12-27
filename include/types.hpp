@@ -6,9 +6,8 @@
 */
 //==================================================================================================
 #pragma once
-#include <stdint.h>
+#include <cstdint>
 #include <string>
-#include <vector>
 
 enum class game_state
 {
@@ -20,28 +19,14 @@ enum class game_state
   Victory
 };
 
-enum class ColorPair : short
-{
-  Default = 1,
-  Player,
-  Orc,
-  Wall,
-  Floor,
-  Gold,
-  Spell,
-  Potion,
-  Hidden,
-  HP_Potion,
-  Boss
-};
-
 enum class ItemType
 {
   Gold,
   Consumable,
   Stairs
 };
-using EntityID = uint32_t;
+
+using EntityID = std::uint32_t;
 
 struct Position
 {

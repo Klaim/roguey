@@ -11,8 +11,6 @@ namespace fs = std::filesystem;
 Game::Game(bool debug) : map(80, 20), debug_mode(debug)
 {
   scripts.init_lua();
-  scripts.lua.new_usertype<MessageLog>("Log", "add",
-                                       [](MessageLog& l, std::string msg) { l.add(msg, ColorPair::Default); });
 
   if (!scripts.load_script("scripts/game.lua"))
   {
@@ -21,6 +19,8 @@ Game::Game(bool debug) : map(80, 20), debug_mode(debug)
   }
 
   renderer.init_colors(scripts);
+
+  scripts.lua.new_usertype<MessageLog>("Log", "add", [](MessageLog& l, std::string msg) { l.add(msg, "Default"); });
 
   sol::protected_function start_cfg_func = scripts.lua["get_start_config"];
   sol::table start_config = start_cfg_func();
@@ -58,10 +58,10 @@ void Game::get_player_setup()
     if (!invalid)
     {
       reg.player_name = input;
-      log.add("Welcome, " + reg.player_name + "!", ColorPair::Gold);
+      log.add("Welcome, " + reg.player_name + "!", "Gold");
       break;
     }
-    else { log.add("Invalid name. Please try again.", ColorPair::Orc); }
+    else { log.add("Invalid name. Please try again.", "Orc"); }
   }
 
   noecho();
@@ -90,18 +90,21 @@ void Game::spawn_item(int x, int y, std::string script_path)
   reg.positions[id] = {x, y};
   sol::table data = scripts.lua["item_data"];
   std::string glyph_str = data["glyph"];
-  reg.renderables[id] = {glyph_str[0], static_cast<ColorPair>(data["color"].get<int>())};
+
+  int cid = data["color"].get_or(COLOR_PAIR(1));
+  reg.renderables[id] = {glyph_str[0], cid};
+
   reg.items[id] = {ItemType::Consumable, 0, data["name"], script_path};
   reg.names[id] = data["name"];
 }
 
 bool Game::spawn_monster(int x, int y, std::string script_path)
 {
-  if (debug_mode) { log.add("Spawning: " + script_path, ColorPair::Orc); }
+  if (debug_mode) { log.add("Spawning: " + script_path, "Orc"); }
   if (!scripts.load_script(script_path))
   {
     // Log the error to the in-game log so you can see it!
-    log.add("Error: Could not load " + script_path, ColorPair::Orc);
+    log.add("Error: Could not load " + script_path, "Orc");
     return false;
   }
 
@@ -117,7 +120,7 @@ bool Game::spawn_monster(int x, int y, std::string script_path)
   if (!result.valid())
   {
     sol::error err = result;
-    log.add("Lua Error in " + script_path + ": " + std::string(err.what()), ColorPair::Orc);
+    log.add("Lua Error in " + script_path + ": " + std::string(err.what()), "Orc");
     reg.destroy_entity(id); // Cleanup
     return false;
   }
@@ -128,8 +131,8 @@ bool Game::spawn_monster(int x, int y, std::string script_path)
   std::string glyph_str = s["glyph"].get<std::string>();
   char glyph = glyph_str.empty() ? '?' : glyph_str[0];
 
-  int cid = s["color"].get_or(0); // Use get_or to prevent crash if color is missing
-  reg.renderables[id] = {glyph, static_cast<ColorPair>(cid == 0 ? 1 : cid)};
+  int cid = s["color"].get_or(COLOR_PAIR(1));
+  reg.renderables[id] = {glyph, cid};
 
   std::string m_type = s["type"];
   std::string name = s["name"].get_or(fs::path(script_path).stem().string());
@@ -178,7 +181,7 @@ void Game::reset(bool full_reset, std::string level_script)
 
   reg.player_id = reg.create_entity();
   reg.positions[reg.player_id] = map.rooms[0].center();
-  reg.renderables[reg.player_id] = {'@', ColorPair::Player};
+  reg.renderables[reg.player_id] = {'@', renderer.get_color("Player")};
   reg.names[reg.player_id] = reg.player_name;
 
   if (full_reset)
@@ -202,7 +205,7 @@ void Game::reset(bool full_reset, std::string level_script)
   {
     EntityID stairs = reg.create_entity();
     reg.positions[stairs] = map.rooms.back().center();
-    reg.renderables[stairs] = {'>', ColorPair::Gold};
+    reg.renderables[stairs] = {'>', renderer.get_color("Gold")};
     reg.items[stairs] = {ItemType::Stairs, 0, next_level_path, ""};
     reg.names[stairs] = "Stairs";
   }
@@ -234,7 +237,7 @@ void Game::reset(bool full_reset, std::string level_script)
   {
     std::string debug_msg = "Debug Spawn: ";
     for (auto const& [name, count] : spawn_counts) { debug_msg += name + " x" + std::to_string(count) + " "; }
-    log.add(debug_msg, ColorPair::Gold);
+    log.add(debug_msg, "Gold");
   }
   map.update_fov(reg.positions[reg.player_id].x, reg.positions[reg.player_id].y, 8);
 }
@@ -402,7 +405,7 @@ void Game::handle_input_inventory(int ch)
         else
         {
           sol::error err = use_res;
-          log.add("Script Error: " + std::string(err.what()), ColorPair::Orc);
+          log.add("Script Error: " + std::string(err.what()), "Orc");
         }
       }
     }

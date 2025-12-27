@@ -31,15 +31,27 @@ void Renderer::set_window_size(int w, int h)
   resize_term(h, w);
 }
 
+int Renderer::get_color(std::string const& name, int def) const
+{
+  if (lua_state) return (*lua_state)[name].get_or(COLOR_PAIR(def));
+  return COLOR_PAIR(def);
+}
+
 void Renderer::init_colors(ScriptEngine& scripts)
 {
+  this->lua_state = &scripts.lua;
   sol::table color_table = scripts.lua["game_colors"];
   for (size_t i = 1; i <= color_table.size(); ++i)
   {
     sol::table entry = color_table[i];
     int id = static_cast<int>(i);
     init_pair(id, entry[1], entry[2]);
-    scripts.lua[entry[3]] = id;
+
+    bool is_bright = entry[3].get_or(false);
+    int final_attr = COLOR_PAIR(id);
+    if (is_bright) final_attr |= A_BOLD;
+
+    scripts.lua[entry[4]] = final_attr;
   }
 }
 
@@ -140,9 +152,11 @@ void Renderer::draw_log(MessageLog const& log, int start_y, int max_row, int max
     std::string txt = log.messages[i].text;
     if ((int)txt.length() > available_width) { txt = txt.substr(0, available_width); }
 
-    attron(COLOR_PAIR(static_cast<short>(log.messages[i].color)));
+    auto color_id = get_color(log.messages[i].color);
+
+    attron(color_id);
     printw("> %s", txt.c_str());
-    attroff(COLOR_PAIR(static_cast<short>(log.messages[i].color)));
+    attroff(color_id);
 
     int cx, cy;
     getyx(stdscr, cy, cx);
@@ -208,9 +222,6 @@ void Renderer::draw_dungeon(Dungeon const& map,
 
   draw_borders(0, 0, view_w, frame_h, level_name, view_h + 2);
 
-  int wall_pair = wall_color;
-  int floor_pair = floor_color;
-
   for (int vy = 0; vy < view_h; ++vy)
   {
     for (int vx = 0; vx < view_w; ++vx)
@@ -222,15 +233,17 @@ void Renderer::draw_dungeon(Dungeon const& map,
 
       if (map.visible_tiles.count({wx, wy}))
       {
-        attron(COLOR_PAIR(map.grid[wy][wx] == '#' ? wall_pair : floor_pair));
+        int col_attr = map.grid[wy][wx] == '#' ? wall_color : floor_color;
+
+        attron(col_attr);
         mvaddch(vy + 1, vx + 1, map.grid[wy][wx]);
-        attroff(COLOR_PAIR(map.grid[wy][wx] == '#' ? wall_pair : floor_pair));
+        attroff(col_attr);
       }
       else if (map.explored[wy][wx])
       {
-        attron(COLOR_PAIR(8));
+        attron(get_color("Hidden"));
         mvaddch(vy + 1, vx + 1, map.grid[wy][wx]);
-        attroff(COLOR_PAIR(8));
+        attroff(get_color("Hidden"));
       }
     }
   }
@@ -245,9 +258,9 @@ void Renderer::draw_dungeon(Dungeon const& map,
 
       if (id == player_id || map.visible_tiles.count(pos))
       {
-        attron(COLOR_PAIR((short)r.color));
+        attron(r.color);
         mvaddch((pos.y - cam_y) + 1, (pos.x - cam_x) + 1, r.glyph);
-        attroff(COLOR_PAIR((short)r.color));
+        attroff(r.color);
       }
     }
   }
@@ -261,15 +274,16 @@ void Renderer::draw_dungeon(Dungeon const& map,
   draw_log(log, view_h + 3, view_h + 2 + log_height, view_w + 1);
 }
 
-void Renderer::animate_projectile(int x, int y, char glyph, ColorPair color)
+void Renderer::animate_projectile(int x, int y, char glyph, std::string const& color)
 {
   // Convert map coordinates to screen coordinates using the last camera position
   int sx = x - last_cam_x + 1;
   int sy = y - last_cam_y + 1;
 
-  attron(COLOR_PAIR(static_cast<short>(color)) | A_BOLD);
+  auto c = get_color(color);
+  attron(c);
   mvaddch(sy, sx, glyph);
-  attroff(COLOR_PAIR(static_cast<short>(color)) | A_BOLD);
+  attroff(c);
   refresh();
   napms(50);
 }
@@ -417,10 +431,10 @@ void Renderer::draw_game_over(MessageLog const& log)
 
   int center_y = separator_y / 2;
 
-  attron(A_BOLD | COLOR_PAIR(static_cast<short>(ColorPair::Orc)));
+  attron(A_BOLD | COLOR_PAIR(get_color("Orc")));
   std::string title = " !!! YOU DIED !!! ";
   mvprintw(center_y - 2, (screen_width - title.length()) / 2, "%s", title.c_str());
-  attroff(A_BOLD | COLOR_PAIR(static_cast<short>(ColorPair::Orc)));
+  attroff(A_BOLD | COLOR_PAIR(get_color("Orc")));
 
   std::string sub = "Press 'r' to Restart, 'q' to Quit";
   mvprintw(center_y + 1, (screen_width - sub.length()) / 2, "%s", sub.c_str());
@@ -441,10 +455,10 @@ void Renderer::draw_victory(MessageLog const& log)
 
   int center_y = separator_y / 2;
 
-  attron(A_BOLD | COLOR_PAIR(static_cast<short>(ColorPair::Gold)));
+  attron(A_BOLD | COLOR_PAIR(get_color("Gold")));
   std::string title = " !!! VICTORY !!! ";
   mvprintw(center_y - 2, (screen_width - title.length()) / 2, "%s", title.c_str());
-  attroff(A_BOLD | COLOR_PAIR(static_cast<short>(ColorPair::Gold)));
+  attroff(A_BOLD | COLOR_PAIR(get_color("Gold")));
 
   std::string sub = "Press 'c' to Continue, 'q' to Quit";
   mvprintw(center_y + 1, (screen_width - sub.length()) / 2, "%s", sub.c_str());

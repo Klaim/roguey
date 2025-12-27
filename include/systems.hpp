@@ -10,7 +10,7 @@ class Renderer;
 struct LogEntry
 {
   std::string text;
-  ColorPair color;
+  std::string color;
 };
 
 class MessageLog
@@ -19,7 +19,7 @@ public:
   std::deque<LogEntry> messages;
   size_t const max_messages = 10;
 
-  void add(std::string msg, ColorPair color = ColorPair::Default);
+  void add(std::string msg, std::string const& color = "Default");
 };
 
 namespace Systems

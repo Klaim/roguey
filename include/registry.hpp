@@ -7,7 +7,7 @@
 struct Renderable
 {
   char glyph;
-  ColorPair color;
+  int color;
 };
 
 struct Registry

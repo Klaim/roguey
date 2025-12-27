@@ -22,7 +22,9 @@ public:
   void refresh_screen();
   void show_error(std::string const& msg);
 
-  void animate_projectile(int x, int y, char glyph, ColorPair color);
+  int get_color(std::string const& name, int def = 1) const;
+
+  void animate_projectile(int x, int y, char glyph, std::string const& color);
 
   void draw_log(MessageLog const& log, int start_y, int max_row, int max_col);
 
@@ -53,4 +55,5 @@ private:
   int clamp(int val, int min, int max);
   int last_cam_x = 0;
   int last_cam_y = 0;
+  sol::state* lua_state = nullptr;
 };
