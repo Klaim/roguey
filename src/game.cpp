@@ -92,7 +92,7 @@ void Game::spawn_item(int x, int y, std::string script_path)
   std::string glyph_str = data["glyph"];
   reg.renderables[id] = {glyph_str[0], static_cast<ColorPair>(data["color"].get<int>())};
   reg.items[id] = {ItemType::Consumable, 0, data["name"], script_path};
-  reg.names[id] = data["name"]; // Store name in generic map
+  reg.names[id] = data["name"];
 }
 
 void Game::spawn_monster(int x, int y, std::string script_path)
@@ -111,7 +111,6 @@ void Game::spawn_monster(int x, int y, std::string script_path)
   reg.renderables[id] = {glyph, static_cast<ColorPair>(cid == 0 ? 1 : cid)};
   std::string m_type = s["type"];
 
-  // NEW: Capture name for combat logs
   std::string name = s["name"].get_or(fs::path(script_path).stem().string());
   reg.names[id] = name;
 
@@ -142,7 +141,7 @@ void Game::reset(bool full_reset, std::string level_script)
   reg.script_paths.clear();
   reg.monster_types.clear();
   reg.monsters.clear();
-  reg.names.clear(); // Clear names
+  reg.names.clear();
   reg.boss_id = 0;
   reg.next_id = 1;
   state = GameState::Dungeon;
@@ -157,7 +156,7 @@ void Game::reset(bool full_reset, std::string level_script)
   reg.player_id = reg.create_entity();
   reg.positions[reg.player_id] = map.rooms[0].center();
   reg.renderables[reg.player_id] = {'@', ColorPair::Player};
-  reg.names[reg.player_id] = reg.player_name; // Ensure player name is in map
+  reg.names[reg.player_id] = reg.player_name;
 
   if (full_reset)
   {
@@ -342,7 +341,10 @@ void Game::render()
     sol::table config = scripts.lua["get_level_config"](depth);
     int wc = config["wall_color"].get_or(4);
     int fc = config["floor_color"].get_or(1);
-    renderer.draw_dungeon(map, reg, log, reg.player_id, depth, wc, fc);
+
+    std::string lvl_name = config["name"].get_or<std::string>("Dungeon");
+
+    renderer.draw_dungeon(map, reg, log, reg.player_id, depth, wc, fc, lvl_name);
   }
   else if (state == GameState::Inventory) { renderer.draw_inventory(inventory, log); }
   else if (state == GameState::Stats) { renderer.draw_stats(reg, reg.player_id, reg.player_name, log); }

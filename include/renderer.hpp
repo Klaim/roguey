@@ -24,19 +24,20 @@ public:
 
   void animate_projectile(int x, int y, char glyph, ColorPair color);
 
-  // Reverted to original signature (no start_x)
   void draw_log(MessageLog const& log, int start_y, int max_row, int max_col);
 
+  // Updated: Now takes level_name
   void draw_dungeon(Dungeon const& map,
                     Registry const& reg,
                     MessageLog const& log,
                     int player_id,
                     int depth,
                     int wall_color,
-                    int floor_color);
+                    int floor_color,
+                    std::string const& level_name);
 
-  // Kept the x,y params for window centering
-  void draw_borders(int x, int y, int width, int height, int separator_y = -1);
+  // Updated: Now takes title
+  void draw_borders(int x, int y, int width, int height, std::string const& title = "", int separator_y = -1);
 
   void draw_inventory(std::vector<ItemTag> const& inventory, MessageLog const& log);
   void draw_stats(Registry const& reg, int player_id, std::string player_name, MessageLog const& log);

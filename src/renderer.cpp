@@ -26,7 +26,6 @@ void Renderer::set_window_size(int w, int h)
 {
   screen_width = w;
   screen_height = h;
-  // Try to resize the physical terminal if possible, though often ignored by emulators
   resize_term(h, w);
 }
 
@@ -71,7 +70,7 @@ int Renderer::clamp(int val, int min, int max)
   return val;
 }
 
-void Renderer::draw_borders(int sx, int sy, int w, int h, int separator_y)
+void Renderer::draw_borders(int sx, int sy, int w, int h, std::string const& title, int separator_y)
 {
   attron(COLOR_PAIR(0) | A_BOLD);
 
@@ -102,6 +101,17 @@ void Renderer::draw_borders(int sx, int sy, int w, int h, int separator_y)
     mvaddch(real_sep_y, sx, ACS_LTEE);
     mvaddch(real_sep_y, sx + w + 1, ACS_RTEE);
     for (int x = 1; x <= w; ++x) { mvaddch(real_sep_y, sx + x, ACS_HLINE); }
+  }
+
+  // Title
+  if (!title.empty())
+  {
+    std::string label = "[ " + title + " ]";
+    if ((int)label.length() <= w)
+    {
+      int label_x = sx + 1 + (w - (int)label.length()) / 2;
+      mvprintw(sy, label_x, "%s", label.c_str());
+    }
   }
 
   attroff(COLOR_PAIR(0) | A_BOLD);
@@ -151,7 +161,8 @@ void Renderer::draw_dungeon(Dungeon const& map,
                             int player_id,
                             int depth,
                             int wall_color,
-                            int floor_color)
+                            int floor_color,
+                            std::string const& level_name)
 {
   int max_y = screen_height;
   int max_x = screen_width;
@@ -169,7 +180,6 @@ void Renderer::draw_dungeon(Dungeon const& map,
 
   int frame_h = view_h + 1 + 1 + log_height;
 
-  // Clamp frame to configured screen height if needed
   if (frame_h > max_y - 2) frame_h = max_y - 2;
 
   Position p = {0, 0};
@@ -191,8 +201,7 @@ void Renderer::draw_dungeon(Dungeon const& map,
     cam_y = clamp(cam_y, 0, map.height - view_h);
   }
 
-  // Draw full size border
-  draw_borders(0, 0, view_w, frame_h, view_h + 2);
+  draw_borders(0, 0, view_w, frame_h, level_name, view_h + 2);
 
   int wall_pair = wall_color;
   int floor_pair = floor_color;
@@ -263,15 +272,8 @@ void Renderer::draw_inventory(std::vector<ItemTag> const& inventory, MessageLog 
   int log_height = 6;
   int separator_y = ui_height - log_height - 1;
 
-  // Always draw max size border
-  draw_borders(0, 0, ui_width, ui_height, separator_y);
+  draw_borders(0, 0, ui_width, ui_height, "INVENTORY", separator_y);
 
-  attron(A_BOLD);
-  mvprintw(2, 4, "--- INVENTORY ---");
-  attroff(A_BOLD);
-
-  // Content starts below header, but we want it reasonably placed.
-  // Standard list from top-left of the content area
   if (inventory.empty()) { mvprintw(4, 6, "(Empty)"); }
   else
   {
@@ -293,15 +295,10 @@ void Renderer::draw_stats(Registry const& reg, int player_id, std::string player
   int log_height = 6;
   int separator_y = ui_height - log_height - 1;
 
-  // Always draw max size border
-  draw_borders(0, 0, ui_width, ui_height, separator_y);
+  draw_borders(0, 0, ui_width, ui_height, "STATS", separator_y);
 
   if (!reg.stats.contains(player_id)) return;
   auto s = reg.stats.at(player_id);
-
-  attron(A_BOLD);
-  mvprintw(2, 4, "--- CHARACTER SHEET ---");
-  attroff(A_BOLD);
 
   mvprintw(4, 6, "Name:   %s", player_name.c_str());
   mvprintw(5, 6, "Level:  %d", s.level);
@@ -323,23 +320,18 @@ void Renderer::draw_character_creation_header(MessageLog const& log)
   int log_height = 6;
   int separator_y = ui_height - log_height - 1;
 
-  // Always draw max size border
-  draw_borders(0, 0, ui_width, ui_height, separator_y);
+  draw_borders(0, 0, ui_width, ui_height, "CREATE YOUR HERO", separator_y);
 
-  // Center content vertically in the upper section
   int upper_center_y = separator_y / 2;
-
-  std::string title = "--- CHARACTER CREATION ---";
   std::string prompt = "Enter your name: ";
 
-  mvprintw(upper_center_y - 2, (screen_width - title.length()) / 2, "%s", title.c_str());
-  mvprintw(upper_center_y + 1, (screen_width - 20) / 2, "%s", prompt.c_str()); // Approx centering for prompt
+  // Center the prompt string vertically in the top section
+  mvprintw(upper_center_y, (screen_width - 20) / 2, "%s", prompt.c_str());
 
   draw_log(log, separator_y + 1, ui_height, ui_width + 1);
 
-  // Position cursor for input right after prompt
   int prompt_x = (screen_width - 20) / 2;
-  move(upper_center_y + 1, prompt_x + prompt.length());
+  move(upper_center_y, prompt_x + prompt.length());
   refresh();
 }
 
@@ -351,15 +343,16 @@ void Renderer::draw_class_selection(std::vector<std::string> const& class_paths,
   int log_height = 6;
   int separator_y = ui_height - log_height - 1;
 
-  // Always draw max size border
-  draw_borders(0, 0, ui_width, ui_height, separator_y);
+  draw_borders(0, 0, ui_width, ui_height, "CREATE YOUR HERO", separator_y);
 
-  std::string title = "--- SELECT YOUR CLASS ---";
-  int content_h = class_paths.size() + 2; // title + spacing + items
+  // Added indication string
+  std::string subtitle = "Select your Class";
+
+  int content_h = class_paths.size() + 2 + 2; // subtitle + spacing + items
   int start_y = (separator_y - content_h) / 2;
   if (start_y < 1) start_y = 1;
 
-  mvprintw(start_y, (screen_width - title.length()) / 2, "%s", title.c_str());
+  mvprintw(start_y, (screen_width - subtitle.length()) / 2, "%s", subtitle.c_str());
 
   for (size_t i = 0; i < class_paths.size(); ++i)
   {
@@ -370,6 +363,7 @@ void Renderer::draw_class_selection(std::vector<std::string> const& class_paths,
     int x_pos = (screen_width - display.length()) / 2;
 
     if ((int)i == selection) attron(A_REVERSE);
+    // Offset by 2 to account for subtitle
     mvprintw(start_y + 2 + i, x_pos, "%s", display.c_str());
     attroff(A_REVERSE);
   }
@@ -386,7 +380,8 @@ void Renderer::draw_game_over(MessageLog const& log)
   int log_height = 6;
   int separator_y = ui_height - log_height - 1;
 
-  draw_borders(0, 0, ui_width, ui_height, separator_y);
+  // Title: GAME OVER
+  draw_borders(0, 0, ui_width, ui_height, "GAME OVER", separator_y);
 
   int center_y = separator_y / 2;
 
@@ -410,7 +405,8 @@ void Renderer::draw_victory(MessageLog const& log)
   int log_height = 6;
   int separator_y = ui_height - log_height - 1;
 
-  draw_borders(0, 0, ui_width, ui_height, separator_y);
+  // Title: VICTORY
+  draw_borders(0, 0, ui_width, ui_height, "VICTORY", separator_y);
 
   int center_y = separator_y / 2;
 
