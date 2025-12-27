@@ -96,7 +96,6 @@ void Game::spawn_item(int x, int y, std::string script_path)
 
   ItemType kind;
   std::string item_kind = data["kind"];
-  log.add("SPAWN::ITEM KIND : " + item_kind, "ui_failure");
   if (item_kind == "consumable") kind = ItemType::Consumable;
   else if (item_kind == "gold") kind = ItemType::Gold;
 
