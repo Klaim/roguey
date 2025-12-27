@@ -208,7 +208,7 @@ void Game::reset(bool full_reset, std::string level_script)
   sol::table item_weights = scripts.lua["get_loot_odds"](depth);
 
   std::map<std::string, int> spawn_counts;
-  for (size_t i = 1; i < map.rooms.size() - 1; ++i)
+  for (std::size_t i = 1; i < map.rooms.size() - 1; ++i)
   {
     Position c = map.rooms[i].center();
     int roll = std::uniform_int_distribution<>(0, 10)(gen);
@@ -383,7 +383,7 @@ void Game::handle_input_inventory(int ch)
 {
   if (ch >= '1' && ch <= '9')
   {
-    size_t idx = ch - '1';
+    std::size_t idx = ch - '1';
     if (idx < inventory.size())
     {
       auto& item = inventory[idx];

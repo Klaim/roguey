@@ -73,7 +73,7 @@ void Dungeon::update_fov(int px, int py, int range)
     double cur_x = px + 0.5, cur_y = py + 0.5;
     for (int r = 0; r < range; r++)
     {
-      int ix = (int)cur_x, iy = (int)cur_y;
+      int ix = static_cast<int>(cur_x), iy = static_cast<int>(cur_y);
       if (ix < 0 || ix >= width || iy < 0 || iy >= height) break;
       visible_tiles.insert({ix, iy});
       explored(ix, iy) = true;

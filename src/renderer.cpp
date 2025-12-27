@@ -50,7 +50,7 @@ void Renderer::setup_window(ScriptEngine& scripts)
   // Process the color table
   this->lua_state = &scripts.lua;
   sol::table color_table = scripts.lua["game_colors"];
-  for (size_t i = 1; i <= color_table.size(); ++i)
+  for (std::size_t i = 1; i <= color_table.size(); ++i)
   {
     sol::table entry = color_table[i];
     int id = static_cast<int>(i);
@@ -135,9 +135,9 @@ void Renderer::draw_borders(int sx, int sy, int w, int h, std::string const& tit
   if (!title.empty())
   {
     std::string label = "[ " + title + " ]";
-    if ((int)label.length() <= w)
+    if (static_cast<int>(label.length()) <= w)
     {
-      int label_x = sx + 1 + (w - (int)label.length()) / 2;
+      int label_x = sx + 1 + (w - static_cast<int>(label.length())) / 2;
       mvprintw(sy, label_x, "%s", label.c_str());
     }
   }
@@ -165,7 +165,7 @@ void Renderer::draw_log(MessageLog const& log, int start_y, int max_row, int max
     int available_width = max_col - 2;
 
     std::string txt = log.messages[i].text;
-    if ((int)txt.length() > available_width) { txt = txt.substr(0, available_width); }
+    if (static_cast<int>(txt.length()) > available_width) { txt = txt.substr(0, available_width); }
 
     auto color_id = get_color(log.messages[i].color);
 
@@ -315,9 +315,9 @@ void Renderer::draw_inventory(std::vector<ItemTag> const& inventory, MessageLog 
   if (inventory.empty()) { mvprintw(4, 6, "(Empty)"); }
   else
   {
-    for (size_t i = 0; i < inventory.size(); ++i)
+    for (std::size_t i = 0; i < inventory.size(); ++i)
     {
-      if (4 + i >= (size_t)separator_y - 1) break;
+      if (4 + i >= static_cast<std::size_t>(separator_y) - 1) break;
       mvprintw(4 + i, 6, "[%zu] %s", i + 1, inventory[i].name.c_str());
     }
   }
@@ -416,15 +416,15 @@ void Renderer::draw_class_selection(std::vector<std::string> const& class_paths,
 
   mvprintw(start_y, (screen_width - subtitle.length()) / 2, "%s", subtitle.c_str());
 
-  for (size_t i = 0; i < class_paths.size(); ++i)
+  for (std::size_t i = 0; i < class_paths.size(); ++i)
   {
-    if (start_y + 2 + (int)i >= separator_y) break;
+    if (start_y + 2 + static_cast<int>(i) >= separator_y) break;
 
     std::string name = fs::path(class_paths[i]).stem().string();
     std::string display = "[ " + name + " ]";
     int x_pos = (screen_width - display.length()) / 2;
 
-    if ((int)i == selection) attron(A_REVERSE);
+    if (static_cast<int>(i) == selection) attron(A_REVERSE);
     mvprintw(start_y + 2 + i, x_pos, "%s", display.c_str());
     attroff(A_REVERSE);
   }
