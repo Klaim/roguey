@@ -19,7 +19,7 @@ public:
   // loads colors from Lua "game_colors"
   void init_colors(ScriptEngine& scripts);
 
-  // NEW: Set the logical window size
+  // Set the logical window size
   void set_window_size(int w, int h);
 
   void clear_screen();
@@ -43,8 +43,10 @@ public:
   void draw_inventory(std::vector<ItemTag> const& inventory, MessageLog const& log);
   void draw_stats(Registry const& reg, int player_id, std::string player_name, MessageLog const& log);
 
-  void draw_character_creation_header();
-  void draw_class_selection(std::vector<std::string> const& class_paths, int selection);
+  // UPDATED: Now accepts log for integration
+  void draw_character_creation_header(MessageLog const& log);
+  void draw_class_selection(std::vector<std::string> const& class_paths, int selection, MessageLog const& log);
+
   void draw_game_over();
   void draw_victory();
 

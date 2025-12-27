@@ -14,8 +14,6 @@ Renderer::Renderer()
   noecho();
   curs_set(0);
   keypad(stdscr, TRUE);
-
-  // Default fallback
   getmaxyx(stdscr, screen_height, screen_width);
 }
 
@@ -28,8 +26,6 @@ void Renderer::set_window_size(int w, int h)
 {
   screen_width = w;
   screen_height = h;
-  // Optional: Resize the actual terminal window if the emulator supports it
-  // resizeterm(h, w);
 }
 
 void Renderer::init_colors(ScriptEngine& scripts)
@@ -106,7 +102,6 @@ void Renderer::draw_borders(int w, int h, int separator_y)
 
 void Renderer::draw_log(MessageLog const& log, int start_y, int max_row, int max_col)
 {
-  // We trust the passed limits, which are now derived from screen_width/height
   int limit_y = max_row;
   int visible_lines = limit_y - start_y + 1;
 
@@ -151,7 +146,6 @@ void Renderer::draw_dungeon(Dungeon const& map,
                             int wall_color,
                             int floor_color)
 {
-  // USE CONFIGURED DIMENSIONS
   int max_y = screen_height;
   int max_x = screen_width;
 
@@ -163,13 +157,11 @@ void Renderer::draw_dungeon(Dungeon const& map,
   int max_map_h = max_y - ui_overhead;
   int max_map_w = max_x - 2;
 
-  // Viewport fills the configured window size
   int view_w = max_map_w;
   int view_h = max_map_h;
 
   int frame_h = view_h + 1 + 1 + log_height;
 
-  // Safety clamp only if calculated frame exceeds configured height
   if (frame_h > max_y - 2) frame_h = max_y - 2;
 
   Position p = {0, 0};
@@ -257,7 +249,6 @@ void Renderer::animate_projectile(int x, int y, char glyph, ColorPair color)
 
 void Renderer::draw_inventory(std::vector<ItemTag> const& inventory, MessageLog const& log)
 {
-  // Use configured dimensions
   int ui_width = screen_width - 2;
   int ui_height = screen_height - 2;
 
@@ -286,7 +277,6 @@ void Renderer::draw_inventory(std::vector<ItemTag> const& inventory, MessageLog 
 
 void Renderer::draw_stats(Registry const& reg, int player_id, std::string player_name, MessageLog const& log)
 {
-  // Use configured dimensions
   int ui_width = screen_width - 2;
   int ui_height = screen_height - 2;
 
@@ -314,25 +304,51 @@ void Renderer::draw_stats(Registry const& reg, int player_id, std::string player
   draw_log(log, separator_y + 1, ui_height, ui_width + 1);
 }
 
-void Renderer::draw_character_creation_header()
+// UPDATED
+void Renderer::draw_character_creation_header(MessageLog const& log)
 {
   clear();
+  int ui_width = screen_width - 2;
+  int ui_height = screen_height - 2;
+  int log_height = 6;
+  int separator_y = ui_height - log_height - 1;
+
+  draw_borders(ui_width, ui_height, separator_y);
+
   mvprintw(5, 10, "--- CHARACTER CREATION ---");
   mvprintw(7, 10, "Enter your name: ");
+
+  draw_log(log, separator_y + 1, ui_height, ui_width + 1);
+
+  // Position cursor for input
+  move(7, 27);
   refresh();
 }
 
-void Renderer::draw_class_selection(std::vector<std::string> const& class_paths, int selection)
+// UPDATED
+void Renderer::draw_class_selection(std::vector<std::string> const& class_paths, int selection, MessageLog const& log)
 {
   clear();
+  int ui_width = screen_width - 2;
+  int ui_height = screen_height - 2;
+  int log_height = 6;
+  int separator_y = ui_height - log_height - 1;
+
+  draw_borders(ui_width, ui_height, separator_y);
+
   mvprintw(5, 10, "--- SELECT YOUR CLASS ---");
+
   for (size_t i = 0; i < class_paths.size(); ++i)
   {
     if ((int)i == selection) attron(A_REVERSE);
+
     std::string name = fs::path(class_paths[i]).stem().string();
     mvprintw(7 + i, 12, "[ %s ]", name.c_str());
+
     attroff(A_REVERSE);
   }
+
+  draw_log(log, separator_y + 1, ui_height, ui_width + 1);
   refresh();
 }
 

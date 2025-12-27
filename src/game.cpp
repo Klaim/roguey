@@ -1,4 +1,6 @@
 #include "game.hpp"
+#include <algorithm> // for std::all_of
+#include <cctype>    // for std::isspace, std::isprint
 #include <filesystem>
 #include <map>
 #include <ncurses.h>
@@ -23,7 +25,6 @@ Game::Game(bool debug) : map(80, 20), debug_mode(debug)
   sol::protected_function start_cfg_func = scripts.lua["get_start_config"];
   sol::table start_config = start_cfg_func();
 
-  // NEW: Apply window size from Lua
   int w = start_config["window_width"].get_or(80);
   int h = start_config["window_height"].get_or(24);
   renderer.set_window_size(w, h);
@@ -40,19 +41,45 @@ Game::~Game() {}
 
 void Game::get_player_setup()
 {
+  // 1. Name Input with Validation Loop
   echo();
   curs_set(1);
-  renderer.draw_character_creation_header();
-  char name_buf[32];
-  getnstr(name_buf, 31);
-  reg.player_name = std::string(name_buf).empty() ? "Hero" : name_buf;
+
+  while (true)
+  {
+    // Redraw UI with current log
+    renderer.draw_character_creation_header(log);
+
+    char name_buf[32];
+    getnstr(name_buf, 31);
+    std::string input(name_buf);
+
+    // Validation: Not empty and not just whitespace/weird chars
+    bool invalid = input.empty() || std::all_of(input.begin(), input.end(),
+                                                [](unsigned char c) { return std::isspace(c) || !std::isprint(c); });
+
+    if (!invalid)
+    {
+      reg.player_name = input;
+      log.add("Welcome, " + reg.player_name + "!", ColorPair::Gold);
+      break;
+    }
+    else
+    {
+      log.add("Invalid name. Please try again.", ColorPair::Orc);
+      // Loop restarts, redrawing the header and the error message
+    }
+  }
+
   noecho();
   curs_set(0);
 
+  // 2. Class Selection Loop
   int selection = 0;
   while (true)
   {
-    renderer.draw_class_selection(scripts.class_templates, selection);
+    renderer.draw_class_selection(scripts.class_templates, selection, log);
+
     int ch = getch();
     if (ch == KEY_UP && selection > 0) selection--;
     if (ch == KEY_DOWN && selection < (int)scripts.class_templates.size() - 1) selection++;
