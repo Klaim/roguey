@@ -42,5 +42,7 @@ namespace roguey
 
     std::string binary_path();
     void set_binary_path(std::string_view new_path);
+
+    std::string checked_script_path(std::string_view path);
   }
 }
