@@ -16,6 +16,7 @@ namespace roguey
   {
     ftxui::Color fg = ftxui::Color::White;
     ftxui::Color bg = ftxui::Color::Black;
+    std::string ansi_fg = "\033[37m"; // Default to white
     bool has_bg = false;
 
     ftxui::Decorator decorator() const
@@ -27,4 +28,5 @@ namespace roguey
   };
 
   ftxui::Color parse_hex_color(std::string const& hex_str);
+  std::string hex_to_ansi(std::string const& hex);
 }

@@ -14,6 +14,6 @@ item_data = {
 function on_pick(stats, log)
     local stash = roll("5d4")
     stats.gold = stats.gold + stash
-    log:add("You found " .. tostring(stash) .. " gold!")
+    log:add("You found " .. tostring(stash) .. " gold!", item_gold)
     return false
 end

@@ -40,13 +40,21 @@ namespace roguey
     if (messages.size() > max_messages) messages.erase(messages.begin());
   }
 
-  EntityID Systems::get_entity_at(Registry const& reg, int x, int y)
+  EntityID Systems::get_entity_at(Registry const& reg, int x, int y, EntityID ignore_id)
   {
+    EntityID found = 0;
     for (auto const& [id, pos] : reg.positions)
     {
-      if (pos.x == x && pos.y == y) return id;
+      if (id == ignore_id) continue; // Skip self
+
+      if (pos.x == x && pos.y == y)
+      {
+        // Priority: Creatures (Stats) > Items/Others
+        if (reg.stats.contains(id)) return id;
+        found = id;
+      }
     }
-    return 0;
+    return found;
   }
 
   void Systems::attack(Registry& reg, EntityID a_id, EntityID d_id, MessageLog& log, sol::state& lua)
@@ -110,45 +118,155 @@ namespace roguey
     }
   }
 
-  void Systems::cast_fireball(Registry& reg, Dungeon& map, int dx, int dy, MessageLog& log, Renderer& renderer)
+  void Systems::cast_fireball(Registry& reg, Dungeon& map, int dx, int dy, MessageLog& log, sol::state& lua)
   {
-    auto& s = reg.stats[reg.player_id];
-    if (s.mana < 20)
+    std::string script_path = "scripts/spells/fireball.lua";
+
+    // 1. Load Script
+    auto result = lua.safe_script_file(script_path, sol::script_pass_on_error);
+    if (!result.valid())
     {
-      log.add("Not enough mana!", "ui_emphasis");
+      sol::error err = result;
+      log.add("Spell Error: " + std::string(err.what()), "ui_failure");
       return;
     }
-    s.mana -= 20;
-    Position p = reg.positions[reg.player_id];
 
-    for (int i = 1; i <= 6; ++i)
+    // 2. Read Config Table
+    sol::table data = lua["spell_data"];
+    if (!data.valid())
     {
-      int tx = p.x + dx * i;
-      int ty = p.y + dy * i;
+      log.add("Spell Error: Missing spell_data", "ui_failure");
+      return;
+    }
 
-      renderer.animate_projectile(tx, ty, '*', "fx_fire");
+    int mana_cost = data.get_or("mana_cost", 10);
+    int damage = data.get_or("damage", 10);
+    int range = data.get_or("range", 10);
+    std::string glyph_str = data.get_or<std::string>("glyph", "*");
+    char glyph = glyph_str.empty() ? '*' : glyph_str[0];
+    std::string color = data.get_or<std::string>("color", "ui_default");
+    std::string name = data.get_or<std::string>("name", "Spell");
+
+    // 3. Check Mana
+    auto& s = reg.stats[reg.player_id];
+    if (s.mana < mana_cost)
+    {
+      log.add("Not enough mana! (" + std::to_string(mana_cost) + " required)", "ui_emphasis");
+      return;
+    }
+    s.mana -= mana_cost;
+
+    Position p = reg.positions[reg.player_id];
+    int start_x = p.x + dx;
+    int start_y = p.y + dy;
+
+    if (!map.is_walkable(start_x, start_y))
+    {
+      log.add("You cast a " + name + " into the wall...", "ui_default");
+      return;
+    }
+
+    EntityID id = reg.create_entity();
+    reg.positions[id] = p; // Start at player pos
+    reg.renderables[id] = {glyph, color};
+    reg.projectiles[id] = {dx, dy, damage, range, reg.player_id};
+    reg.script_paths[id] = script_path;
+    reg.names[id] = name;
+
+    log.add("You cast a " + name + "!", color);
+  }
+
+  void Systems::update_projectiles(
+    Registry& reg, Dungeon const& map, MessageLog& log, sol::state& lua, Renderer* renderer)
+  {
+    std::vector<EntityID> to_destroy;
+
+    for (auto& [id, proj] : reg.projectiles)
+    {
+      if (!reg.positions.contains(id))
+      {
+        to_destroy.push_back(id);
+        continue;
+      }
+
+      if (proj.range <= 0)
+      {
+        log.add(reg.names[id] + " fizzles out.", "ui_default");
+        to_destroy.push_back(id);
+        continue;
+      }
+      proj.range--;
+
+      auto& pos = reg.positions[id];
+
+      if (reg.script_paths.contains(id))
+      {
+        auto script_res = lua.safe_script_file(reg.script_paths[id], sol::script_pass_on_error);
+        if (script_res.valid())
+        {
+          sol::protected_function update_func = lua["update_projectile"];
+          auto res = update_func(pos.x, pos.y, proj.dx, proj.dy);
+          if (res.valid())
+          {
+            proj.dx = res[0];
+            proj.dy = res[1];
+          }
+        }
+      }
+
+      int tx = pos.x + proj.dx;
+      int ty = pos.y + proj.dy;
+
+      if (renderer)
+      {
+        char glyph = '*';
+        std::string color = "ui_default";
+        if (reg.renderables.contains(id))
+        {
+          glyph = reg.renderables[id].glyph;
+          color = reg.renderables[id].color;
+        }
+
+        char restore = map.grid(tx, ty);
+        EntityID other = get_entity_at(reg, tx, ty, id);
+        if (other != 0 && reg.renderables.contains(other)) { restore = reg.renderables[other].glyph; }
+
+        renderer->animate_projectile(tx, ty, glyph, color, restore);
+      }
 
       if (!map.is_walkable(tx, ty))
       {
-        log.add("Fireball hits a wall.", "ui_default");
-        break;
+        log.add(reg.names[id] + " hits a wall.", "ui_default");
+        to_destroy.push_back(id);
+        continue;
       }
 
-      EntityID target = get_entity_at(reg, tx, ty);
-      if (target && target != reg.player_id)
-      {
-        reg.stats[target].hp -= 40;
-        std::string t_name = reg.names.count(target) ? reg.names.at(target) : "Target";
-        log.add("Fireball burns " + t_name + "!", "fx_fire");
+      EntityID target = get_entity_at(reg, tx, ty, id);
 
-        if (reg.stats[target].hp <= 0)
+      if (target != 0 && target != proj.owner)
+      {
+        if (reg.stats.contains(target))
         {
-          log.add(t_name + " incinerated.", "ui_gold");
-          reg.destroy_entity(target);
+          reg.stats[target].hp -= proj.damage;
+          std::string t_name = reg.names.count(target) ? reg.names.at(target) : "Target";
+          log.add(reg.names[id] + " burns " + t_name + " for " + std::to_string(proj.damage), "fx_fire");
+
+          if (reg.stats[target].hp <= 0)
+          {
+            log.add(t_name + " incinerated.", "ui_gold");
+            reg.destroy_entity(target);
+          }
         }
-        break;
+        to_destroy.push_back(id);
+      }
+      else
+      {
+        pos.x = tx;
+        pos.y = ty;
       }
     }
+
+    for (auto id : to_destroy) reg.destroy_entity(id);
   }
 
   void Systems::move_monsters(Registry& reg, Dungeon const& map, MessageLog& log, sol::state& lua)
