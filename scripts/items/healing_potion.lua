@@ -12,7 +12,7 @@ item_data = {
 }
 
 function on_pick(stats, log)
-    log:add("You picked up a Healing Potion")
+    log:add("You picked up a Healing Potion",ui_hp)
     return true
 end
 

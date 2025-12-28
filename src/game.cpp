@@ -186,7 +186,7 @@ namespace roguey
     }
     else if (event == ftxui::Event::Character('f'))
     {
-      Systems::cast_fireball(reg, map, last_dx, last_dy, log, renderer);
+      Systems::cast_fireball(reg, map, last_dx, last_dy, log, scripts.lua);
       acted = true;
     }
 
@@ -219,6 +219,13 @@ namespace roguey
           }
         }
       }
+
+      int max_iter = 20;
+      while (!reg.projectiles.empty() && max_iter-- > 0)
+      {
+        Systems::update_projectiles(reg, map, log, scripts.lua, &renderer);
+      }
+
       Systems::move_monsters(reg, map, log, scripts.lua);
       map.update_fov(reg.positions[reg.player_id].x, reg.positions[reg.player_id].y,
                      reg.stats[reg.player_id].fov_range);
@@ -365,16 +372,7 @@ namespace roguey
     }
     if (!level_script.empty()) current_level_script = level_script;
 
-    reg.positions.clear();
-    reg.renderables.clear();
-    reg.items.clear();
-    reg.stats.clear();
-    reg.script_paths.clear();
-    reg.monster_types.clear();
-    reg.monsters.clear();
-    reg.names.clear();
-    reg.boss_id = 0;
-    reg.next_id = 1;
+    reg.clear();
     state = game_state::Dungeon;
 
     scripts.load_script(current_level_script);

@@ -33,13 +33,18 @@ namespace roguey
 
   namespace Systems
   {
-    EntityID get_entity_at(Registry const& reg, int x, int y);
+    EntityID get_entity_at(Registry const& reg, int x, int y, EntityID ignore_id = 0);
+
     void check_level_up(Registry& reg, MessageLog& log, sol::state& lua);
     void attack(Registry& reg, EntityID a_id, EntityID d_id, MessageLog& log, sol::state& lua);
 
-    void cast_fireball(Registry& reg, Dungeon& map, int dx, int dy, MessageLog& log, Renderer& renderer);
+    void cast_fireball(Registry& reg, Dungeon& map, int dx, int dy, MessageLog& log, sol::state& lua);
     void move_monsters(Registry& reg, Dungeon const& map, MessageLog& log, sol::state& lua);
 
     std::string checked_script_path(std::string_view path);
+    void update_projectiles(
+      Registry& reg, Dungeon const& map, MessageLog& log, sol::state& lua, Renderer* renderer = nullptr);
+    std::string binary_path();
+    void set_binary_path(std::string_view new_path);
   }
 }

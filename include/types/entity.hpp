@@ -11,7 +11,7 @@
 
 namespace roguey
 {
-  using EntityID = std::uint32_t;
+  using EntityID = std::uint64_t;
 
   struct Stats
   {
