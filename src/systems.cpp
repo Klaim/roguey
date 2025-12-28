@@ -15,32 +15,11 @@ namespace roguey
 {
   namespace Systems
   {
-    // NOTES:
-    // - you can set it automatically using some non-standard functions, if you do so the setter is not necessary
-    // anymore
-    // - on windows there is a way to get program arguments from anywhere, I believe itś possible on linux too
-    // - I would have used a path here, but to avoid including filesystem in the header I'll use a string like you did
-    //   in the rest of the code
-    // - if you keep a variable like this, make sure it's never set from multiple thread, or add protection
-    static std::string current_binary_path;
-
-    std::string binary_path()
-    {
-      return current_binary_path;
-    }
-
-    void set_binary_path(std::string_view new_path)
-    {
-      current_binary_path = new_path;
-    }
-
     std::string checked_script_path(std::string_view path)
     {
       // we expect script files to be located in a directory relative to the current executable location
       namespace fs = std::filesystem;
-      fs::path const exe_path = fs::absolute(binary_path());
-      auto const exe_dir_path = exe_path.parent_path();
-      auto complete_path = exe_dir_path / path;
+      auto complete_path = fs::canonical(path);
       assert(fs::exists(complete_path));
       return complete_path.string();
     }
