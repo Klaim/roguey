@@ -206,6 +206,9 @@ void Game::handle_dungeon_input(ftxui::Event event)
             reset(false, reg.items[target].name);
             return;
           }
+
+          scripts.load_script(reg.items[target].script);
+
           if (scripts.lua["on_pick"](reg.stats[reg.player_id], log)) { inventory.push_back(reg.items[target]); }
           reg.destroy_entity(target);
         }

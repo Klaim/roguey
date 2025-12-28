@@ -8,7 +8,7 @@
 #pragma once
 #include "dungeon.hpp"
 #include "registry.hpp"
-#include "sol/sol.hpp"
+#include <sol/sol.hpp>
 #include <string>
 #include <vector>
 

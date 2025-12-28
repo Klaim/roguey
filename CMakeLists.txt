@@ -39,11 +39,11 @@ set(SOURCES
 
 file(GLOB_RECURSE LUA_SCRIPTS "scripts/*.lua")
 
-include_directories(include)
 add_executable(rogue_game ${SOURCES} ${LUA_SCRIPTS})
 
 target_link_libraries(rogue_game PRIVATE ftxui::screen ftxui::dom ftxui::component ${LUA_LIBRARIES} pthread)
 target_include_directories(rogue_game PRIVATE ${LUA_INCLUDE_DIR} include)
+target_include_directories(rogue_game SYSTEM PRIVATE third_party)
 
 ##==================================================================================================
 ## Copy script to binary
