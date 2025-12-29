@@ -12,7 +12,9 @@
 #include "script_engine.hpp"
 #include "systems.hpp"
 #include <ftxui/component/component.hpp>
+#include <optional>
 #include <random>
+#include <vector>
 
 namespace roguey
 {
@@ -34,7 +36,7 @@ namespace roguey
     void handle_game_over_input(ftxui::Event event);
     void handle_victory_input(ftxui::Event event);
 
-    void update_animation(); // Helper to advance projectiles
+    bool update_animation(); // Returns true if redraw is needed
 
     void reset(bool full_reset, std::string level_script = "");
     void spawn_item(int x, int y, std::string script_path);
@@ -49,6 +51,11 @@ namespace roguey
     std::string input_buffer;
     int class_selection = 0;
     game_state state = game_state::Dungeon;
+
+    // Input Control
+    bool has_buffered_event = false;
+    ftxui::Event buffered_event;
+    int menu_lock = 0; // Debounce timer for UI transitions
 
     // Game Data
     Dungeon map;
@@ -66,6 +73,7 @@ namespace roguey
     int last_dx = 1;
     int last_dy = 0;
 
+    // Random Number Generation
     std::random_device random_bits;
     std::mt19937 random_generator;
   };

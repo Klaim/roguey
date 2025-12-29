@@ -25,6 +25,8 @@ namespace roguey
     int damage;
     int range;
     EntityID owner;
+    int action_delay = 2;
+    int action_timer = 0;
   };
 
   class Registry
@@ -49,7 +51,6 @@ namespace roguey
     EntityID create_entity() { return next_id++; }
 
     void clear();
-
     void destroy_entity(EntityID id);
   };
 }

@@ -8,9 +8,10 @@ spell_data = {
   name = "Fireball",
   mana_cost = 1,
   damage = 400,
-  range = 5,
+  range = 8,
   glyph = "X",
-  color = "fx_fire"
+  color = "fx_fire",
+  delay = 1
 }
 
 function update_projectile(x, y, dx, dy)

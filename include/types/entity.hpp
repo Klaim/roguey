@@ -17,5 +17,6 @@ namespace roguey
   {
     std::string archetype;
     int hp, max_hp, mana, max_mana, damage, xp, level, fov_range, gold;
+    int action_delay = 10, action_timer = 0;
   };
 }

@@ -92,6 +92,7 @@ namespace roguey
       current_stats["hp"] = s.max_hp;
       current_stats["mp"] = s.max_mana;
       current_stats["damage"] = s.damage;
+      current_stats["delay"] = s.action_delay;
 
       sol::protected_function level_func = lua["level_up"];
       auto level_res = level_func(current_stats);
@@ -104,6 +105,7 @@ namespace roguey
         s.max_mana = new_stats["mp"];
         s.mana = s.max_mana;
         s.damage = new_stats["damage"];
+        s.action_delay = new_stats.get_or("delay", s.action_delay);
         log.add("Level Up! You are now Level " + std::to_string(s.level), "ui_gold");
       }
     }
@@ -133,6 +135,8 @@ namespace roguey
     int mana_cost = data.get_or("mana_cost", 10);
     int damage = data.get_or("damage", 10);
     int range = data.get_or("range", 10);
+    int delay = data.get_or("delay", 2);
+
     std::string glyph_str = data.get_or<std::string>("glyph", "*");
     char glyph = glyph_str.empty() ? '*' : glyph_str[0];
     std::string color = data.get_or<std::string>("color", "ui_default");
@@ -160,16 +164,17 @@ namespace roguey
     EntityID id = reg.create_entity();
     reg.positions[id] = p; // Start at player pos
     reg.renderables[id] = {glyph, color};
-    reg.projectiles[id] = {dx, dy, damage, range, reg.player_id};
+    reg.projectiles[id] = {dx, dy, damage, range, reg.player_id, delay, 0};
     reg.script_paths[id] = script_path;
     reg.names[id] = name;
 
     log.add("You cast a " + name + "!", color);
   }
 
-  void Systems::update_projectiles(Registry& reg, Dungeon const& map, MessageLog& log, sol::state& lua)
+  bool Systems::update_projectiles(Registry& reg, Dungeon const& map, MessageLog& log, sol::state& lua)
   {
     std::vector<EntityID> to_destroy;
+    bool any_change = false;
 
     for (auto& [id, proj] : reg.projectiles)
     {
@@ -184,8 +189,20 @@ namespace roguey
       if (proj.range < 0)
       {
         to_destroy.push_back(id);
+        any_change = true;
         continue;
       }
+
+      // Logic: Wait for timer to hit 0
+      if (proj.action_timer > 0)
+      {
+        proj.action_timer--;
+        continue; // No visual change
+      }
+
+      // Timer hit 0, we act now
+      proj.action_timer = proj.action_delay;
+      any_change = true;
 
       // Standard range fizzle
       if (proj.range == 0)
@@ -255,16 +272,30 @@ namespace roguey
     }
 
     for (auto id : to_destroy) reg.destroy_entity(id);
+    return any_change;
   }
 
-  void Systems::move_monsters(Registry& reg, Dungeon const& map, MessageLog& log, sol::state& lua)
+  bool Systems::move_monsters(Registry& reg, Dungeon const& map, MessageLog& log, sol::state& lua)
   {
-    if (!reg.positions.contains(reg.player_id)) return;
+    if (!reg.positions.contains(reg.player_id)) return false;
     Position p_pos = reg.positions.at(reg.player_id);
+    bool any_change = false;
 
     for (auto m_id : reg.monsters)
     {
       if (!reg.positions.contains(m_id) || !reg.script_paths.contains(m_id)) continue;
+
+      auto& m_stats = reg.stats[m_id];
+      // Logic: Wait for timer to hit 0
+      if (m_stats.action_timer > 0)
+      {
+        m_stats.action_timer--;
+        continue; // No visual change
+      }
+
+      // Timer hit 0, act now
+      m_stats.action_timer = m_stats.action_delay;
+
       auto& m_pos = reg.positions[m_id];
       std::string const& script = reg.script_paths[m_id];
 
@@ -280,14 +311,20 @@ namespace roguey
         if (dx != 0 || dy != 0)
         {
           int tx = m_pos.x + dx, ty = m_pos.y + dy;
-          if (tx == p_pos.x && ty == p_pos.y) attack(reg, m_id, reg.player_id, log, lua);
+          if (tx == p_pos.x && ty == p_pos.y)
+          {
+            attack(reg, m_id, reg.player_id, log, lua);
+            any_change = true;
+          }
           else if (map.is_walkable(tx, ty) && get_entity_at(reg, tx, ty) == 0)
           {
             m_pos.x = tx;
             m_pos.y = ty;
+            any_change = true;
           }
         }
       }
     }
+    return any_change;
   }
 }

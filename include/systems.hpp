@@ -37,8 +37,10 @@ namespace roguey
     void check_level_up(Registry& reg, MessageLog& log, sol::state& lua);
     void cast_fireball(Registry& reg, Dungeon& map, int dx, int dy, MessageLog& log, sol::state& lua);
 
-    void update_projectiles(Registry& reg, Dungeon const& map, MessageLog& log, sol::state& lua);
+    // Returns true if a visual change occurred (movement, damage, death)
+    bool update_projectiles(Registry& reg, Dungeon const& map, MessageLog& log, sol::state& lua);
 
-    void move_monsters(Registry& reg, Dungeon const& map, MessageLog& log, sol::state& lua);
+    // Returns true if a visual change occurred
+    bool move_monsters(Registry& reg, Dungeon const& map, MessageLog& log, sol::state& lua);
   }
 }
