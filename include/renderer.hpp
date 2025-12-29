@@ -25,7 +25,7 @@ namespace roguey
 
     ~Renderer() {}
 
-    void load_colors(sol::state& lua);
+    void load_config(sol::state& lua);
 
     ftxui::Decorator get_style(std::string const& name) const;
 
@@ -51,7 +51,9 @@ namespace roguey
 
   private:
     ftxui::Element draw_log(MessageLog const& log);
+
     std::map<std::string, ThemeStyle> style_cache;
+    std::vector<SpeedThreshold> speed_thresholds; // Stores loaded speed config
 
     int last_cam_x = 0;
     int last_cam_y = 0;

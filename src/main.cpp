@@ -42,7 +42,7 @@ int main(int argc, char* argv[])
     ~working_dir_is_exe_dir() { std::filesystem::current_path(original_working_dir); }
   } change_working_dir [[maybe_unused]]{argv[0]};
 
-  roguey::Game game(debug);
+  roguey::game game(debug);
 
   if (!ftxui::Terminal::ColorSupport())
   {

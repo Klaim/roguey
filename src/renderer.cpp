@@ -19,38 +19,59 @@ namespace roguey
   namespace fs = std::filesystem;
   using namespace ftxui;
 
-  void Renderer::load_colors(sol::state& lua)
+  void Renderer::load_config(sol::state& lua)
   {
-    sol::table table = lua["game_colors"];
-    if (!table.valid()) return;
-
-    for (auto const& [key, val] : table.as<std::map<std::string, sol::object>>())
+    // 1. Load Colors
+    sol::table colors = lua["game_colors"];
+    if (colors.valid())
     {
-      ThemeStyle style;
-      if (val.is<std::string>())
+      for (auto const& [key, val] : colors.as<std::map<std::string, sol::object>>())
       {
-        std::string hex = val.as<std::string>();
-        style.fg = parse_hex_color(hex);
-        style.ansi_fg = hex_to_ansi(hex);
-        style.has_bg = false;
-      }
-      else if (val.is<sol::table>())
-      {
-        sol::table t = val.as<sol::table>();
-        std::string fg_str = t["fg"].get_or<std::string>("#FFFFFF");
-
-        style.fg = parse_hex_color(fg_str);
-        style.ansi_fg = hex_to_ansi(fg_str);
-
-        sol::optional<std::string> bg_str = t["bg"];
-        if (bg_str)
+        ThemeStyle style;
+        if (val.is<std::string>())
         {
-          style.bg = parse_hex_color(bg_str.value());
-          style.has_bg = true;
+          std::string hex = val.as<std::string>();
+          style.fg = parse_hex_color(hex);
+          style.ansi_fg = hex_to_ansi(hex);
+          style.has_bg = false;
         }
+        else if (val.is<sol::table>())
+        {
+          sol::table t = val.as<sol::table>();
+          std::string fg_str = t["fg"].get_or<std::string>("#FFFFFF");
+
+          style.fg = parse_hex_color(fg_str);
+          style.ansi_fg = hex_to_ansi(fg_str);
+
+          sol::optional<std::string> bg_str = t["bg"];
+          if (bg_str)
+          {
+            style.bg = parse_hex_color(bg_str.value());
+            style.has_bg = true;
+          }
+        }
+        style_cache[key] = style;
+        // Expose keys back to Lua for scripts to use (e.g. "ui_gold")
+        lua[key] = key;
       }
-      style_cache[key] = style;
-      lua[key] = key;
+    }
+
+    // 2. Load Speed Thresholds
+    sol::table speeds = lua["speed_thresholds"];
+    speed_thresholds.clear();
+    if (speeds.valid())
+    {
+      for (auto const& [key, val] : speeds.as<std::map<int, sol::table>>())
+      {
+        SpeedThreshold st;
+        st.limit = val.get_or("limit", 10);
+        st.label = val.get_or<std::string>("label", "Unknown");
+        st.color = val.get_or<std::string>("color", "ui_default");
+        speed_thresholds.push_back(st);
+      }
+      // Ensure they are sorted by limit so we can find the first match
+      std::sort(speed_thresholds.begin(), speed_thresholds.end(),
+                [](SpeedThreshold const& a, SpeedThreshold const& b) { return a.limit < b.limit; });
     }
   }
 
@@ -58,8 +79,6 @@ namespace roguey
   {
     auto it = style_cache.find(name);
     if (it != style_cache.end()) { return it->second.decorator(); }
-
-    // Default fallback
     return color(Color::White);
   }
 
@@ -132,7 +151,6 @@ namespace roguey
               if (id == player_id || map.visible_tiles.count({wx, wy}))
               {
                 std::string g(1, r.glyph);
-                // Now uses get_style which supports BG
                 row_cells.push_back(text(g) | get_style(r.color));
                 entity_drawn = true;
                 break;
@@ -194,17 +212,46 @@ namespace roguey
 
     auto s = reg.stats.at(player_id);
 
+    // Determine Speed Label using loaded configuration
+    std::string speed_str = "Unknown";
+    std::string speed_color = "ui_default";
+
+    for (auto const& threshold : speed_thresholds)
+    {
+      if (s.action_delay <= threshold.limit)
+      {
+        speed_str = threshold.label;
+        speed_color = threshold.color;
+        break;
+      }
+    }
+
     return window(
              text(" Stats ") | get_style("ui_border"),
-             vbox({filler(),
-                   vbox({text("Name:   " + player_name), text("Class:  " + s.archetype),
-                         text("Level:  " + std::to_string(s.level)), text("XP:     " + std::to_string(s.xp)),
-                         text("HP:     " + std::to_string(s.hp) + " / " + std::to_string(s.max_hp)),
-                         text("Mana:   " + std::to_string(s.mana) + " / " + std::to_string(s.max_mana)),
-                         text("Damage: " + std::to_string(s.damage)), text("FOV:    " + std::to_string(s.fov_range)),
-                         text("Gold:   " + std::to_string(s.gold))}) |
-                     center,
-                   filler(), separator(), text("[C/ESC] Close") | center, separator(), draw_log(log)})) |
+             vbox(
+               {filler(),
+                vbox({hbox({text("Name:   "), text(player_name) | get_style("ui_emphasis")}) | center,
+                      hbox({text("Class:  "), text(s.archetype) | get_style("ui_emphasis")}) | center, text(" "),
+
+                      hbox({text("Level:  "), text(std::to_string(s.level)) | get_style("ui_gold")}) | center,
+                      hbox({text("XP:     "), text(std::to_string(s.xp)) | get_style("ui_text")}) | center, text(" "),
+
+                      hbox({text("HP:     "),
+                            text(std::to_string(s.hp) + " / " + std::to_string(s.max_hp)) | get_style("ui_hp")}) |
+                        center,
+                      hbox({text("Mana:   "),
+                            text(std::to_string(s.mana) + " / " + std::to_string(s.max_mana)) | get_style("ui_mp")}) |
+                        center,
+                      text(" "),
+
+                      hbox({text("Damage: "), text(std::to_string(s.damage)) | get_style("ui_failure")}) | center,
+                      hbox({text("Speed:  "), text(speed_str) | get_style(speed_color)}) | center,
+                      hbox({text("FOV:    "), text(std::to_string(s.fov_range)) | get_style("ui_text")}) | center,
+                      text(" "),
+
+                      hbox({text("Gold:   "), text(std::to_string(s.gold)) | get_style("ui_gold")}) | center}) |
+                  center,
+                filler(), separator(), text("[C/ESC] Close") | center, separator(), draw_log(log)})) |
            flex;
   }
 

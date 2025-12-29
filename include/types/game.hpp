@@ -19,4 +19,12 @@ namespace roguey
     Victory,
     Animating
   };
+
+  struct SpeedThreshold
+  {
+    int limit;
+    std::string label;
+    std::string color;
+  };
+
 }

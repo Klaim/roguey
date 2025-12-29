@@ -18,11 +18,11 @@
 
 namespace roguey
 {
-  class Game
+  class game
   {
   public:
-    Game(bool debug = false);
-    ~Game();
+    game(bool debug = false);
+    ~game();
 
     ftxui::Element render_ui();
     bool on_event(ftxui::Event event);

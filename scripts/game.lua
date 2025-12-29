@@ -33,6 +33,16 @@ game_colors = {
     fx_fire         = "#FF4500"
 }
 
+-- Speed Display Configuration
+speed_thresholds = {
+    { limit = 1,  label = "Godlike",   color = "ui_gold"     },
+    { limit = 5,  label = "Very Fast", color = "ui_gold"     },
+    { limit = 10, label = "Fast",      color = "ui_emphasis" },
+    { limit = 15, label = "Normal",    color = "ui_default"  },
+    { limit = 20, label = "Slow",      color = "ui_failure"  },
+    { limit = 99, label = "Sluggish",  color = "ui_failure"  }
+}
+
 help_text = [[
   CONTROLS
   --------
