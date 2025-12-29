@@ -13,15 +13,27 @@
 
 namespace roguey
 {
+  namespace fs = std::filesystem;
+
   namespace Systems
   {
     std::string checked_script_path(std::string_view path)
     {
-      // we expect script files to be located in a directory relative to the current executable location
-      namespace fs = std::filesystem;
       auto complete_path = fs::canonical(path);
-      assert(fs::exists(complete_path));
       return complete_path.string();
+    }
+
+    // New Helper Implementation
+    bool execute_script(sol::state& lua, std::string const& path, MessageLog& log)
+    {
+      auto res = lua.safe_script_file(checked_script_path(path), sol::script_pass_on_error);
+      if (!res.valid())
+      {
+        sol::error err = res;
+        log.add("Script Error (" + fs::path(path).filename().string() + "): " + std::string(err.what()), "ui_failure");
+        return false;
+      }
+      return true;
     }
   }
 
@@ -36,11 +48,9 @@ namespace roguey
     EntityID found = 0;
     for (auto const& [id, pos] : reg.positions)
     {
-      if (id == ignore_id) continue; // Skip self
-
+      if (id == ignore_id) continue;
       if (pos.x == x && pos.y == y)
       {
-        // Priority: Creatures (Stats) > Items/Others
         if (reg.stats.contains(id)) return id;
         found = id;
       }
@@ -54,7 +64,6 @@ namespace roguey
     auto& d = reg.stats[d_id];
     d.hp -= a.damage;
 
-    // Get names or fallbacks
     std::string a_name = reg.names.count(a_id) ? reg.names.at(a_id) : "Unknown";
     std::string d_name = reg.names.count(d_id) ? reg.names.at(d_id) : "Unknown";
 
@@ -85,8 +94,8 @@ namespace roguey
     if (s.xp >= next_lvl_xp)
     {
       s.level++;
-      auto res = lua.safe_script_file(Systems::checked_script_path(reg.player_class_script), sol::script_pass_on_error);
-      if (!res.valid()) return;
+
+      if (!execute_script(lua, reg.player_class_script, log)) return;
 
       sol::table current_stats = lua.create_table();
       current_stats["hp"] = s.max_hp;
@@ -115,16 +124,8 @@ namespace roguey
   {
     std::string script_path = "scripts/spells/fireball.lua";
 
-    // 1. Load Script
-    auto result = lua.safe_script_file(script_path, sol::script_pass_on_error);
-    if (!result.valid())
-    {
-      sol::error err = result;
-      log.add("Spell Error: " + std::string(err.what()), "ui_failure");
-      return;
-    }
+    if (!execute_script(lua, script_path, log)) return;
 
-    // 2. Read Config Table
     sol::table data = lua["spell_data"];
     if (!data.valid())
     {
@@ -142,7 +143,6 @@ namespace roguey
     std::string color = data.get_or<std::string>("color", "ui_default");
     std::string name = data.get_or<std::string>("name", "Spell");
 
-    // 3. Check Mana
     auto& s = reg.stats[reg.player_id];
     if (s.mana < mana_cost)
     {
@@ -162,7 +162,7 @@ namespace roguey
     }
 
     EntityID id = reg.create_entity();
-    reg.positions[id] = p; // Start at player pos
+    reg.positions[id] = p;
     reg.renderables[id] = {glyph, color};
     reg.projectiles[id] = {dx, dy, damage, range, reg.player_id, delay, 0};
     reg.script_paths[id] = script_path;
@@ -184,8 +184,6 @@ namespace roguey
         continue;
       }
 
-      // Feature Restoration: Delay destruction by one frame after impact
-      // We use range = -1 to signal "I hit something last frame, now remove me"
       if (proj.range < 0)
       {
         to_destroy.push_back(id);
@@ -193,18 +191,15 @@ namespace roguey
         continue;
       }
 
-      // Logic: Wait for timer to hit 0
       if (proj.action_timer > 0)
       {
         proj.action_timer--;
-        continue; // No visual change
+        continue;
       }
 
-      // Timer hit 0, we act now
       proj.action_timer = proj.action_delay;
       any_change = true;
 
-      // Standard range fizzle
       if (proj.range == 0)
       {
         log.add(reg.names[id] + " fizzles out.", "ui_default");
@@ -215,9 +210,9 @@ namespace roguey
 
       auto& pos = reg.positions[id];
 
-      // Run Lua update script
       if (reg.script_paths.contains(id))
       {
+        // Keeping this loop fast/silent on errors for now, but could use execute_script if robustness is preferred
         auto script_res = lua.safe_script_file(reg.script_paths[id], sol::script_pass_on_error);
         if (script_res.valid())
         {
@@ -234,13 +229,12 @@ namespace roguey
       int tx = pos.x + proj.dx;
       int ty = pos.y + proj.dy;
 
-      // Logic Update
       if (!map.is_walkable(tx, ty))
       {
         log.add(reg.names[id] + " hits a wall.", "ui_default");
         pos.x = tx;
-        pos.y = ty;      // Move visual to wall for impact frame
-        proj.range = -1; // Destroy NEXT frame
+        pos.y = ty;
+        proj.range = -1;
         continue;
       }
 
@@ -261,12 +255,11 @@ namespace roguey
           }
         }
         pos.x = tx;
-        pos.y = ty;      // Move visual to target for impact frame
-        proj.range = -1; // Destroy NEXT frame
+        pos.y = ty;
+        proj.range = -1;
         continue;
       }
 
-      // No collision, just move
       pos.x = tx;
       pos.y = ty;
     }
@@ -286,14 +279,12 @@ namespace roguey
       if (!reg.positions.contains(m_id) || !reg.script_paths.contains(m_id)) continue;
 
       auto& m_stats = reg.stats[m_id];
-      // Logic: Wait for timer to hit 0
       if (m_stats.action_timer > 0)
       {
         m_stats.action_timer--;
-        continue; // No visual change
+        continue;
       }
 
-      // Timer hit 0, act now
       m_stats.action_timer = m_stats.action_delay;
 
       auto& m_pos = reg.positions[m_id];

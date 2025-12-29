@@ -42,5 +42,7 @@ namespace roguey
 
     // Returns true if a visual change occurred
     bool move_monsters(Registry& reg, Dungeon const& map, MessageLog& log, sol::state& lua);
+
+    bool execute_script(sol::state& lua, std::string const& path, MessageLog& log);
   }
 }

@@ -70,12 +70,7 @@ namespace roguey
 
   bool Game::on_event(ftxui::Event event)
   {
-    // Handle Animation/Game Tick
-    if (event == ftxui::Event::Special({0}))
-    {
-      // Only return TRUE (request redraw) if something actually changed visually
-      return update_animation();
-    }
+    if (event == ftxui::Event::Special({0})) { return update_animation(); }
 
     if (is_setup)
     {
@@ -99,8 +94,7 @@ namespace roguey
     else if (state == game_state::Inventory) handle_inventory_input(event);
     else
     {
-      // Handle Stats/Help Input with Debounce
-      if (menu_lock > 0) return true; // Ignore input if locked
+      if (menu_lock > 0) return true;
 
       if (event == ftxui::Event::Escape || event == ftxui::Event::Character('c')) { state = game_state::Dungeon; }
     }
@@ -111,41 +105,34 @@ namespace roguey
   {
     bool needs_redraw = false;
 
-    // 1. Tick Menu Lock (Debounce)
     if (menu_lock > 0) menu_lock--;
 
-    // 2. Tick Player Cooldown (No redraw needed just for this)
     if (reg.stats.contains(reg.player_id))
     {
       auto& s = reg.stats[reg.player_id];
       if (s.action_timer > 0) s.action_timer--;
 
-      // Input Buffering Execution
       if (s.action_timer == 0 && has_buffered_event)
       {
         if (state == game_state::Dungeon || state == game_state::Animating)
         {
           has_buffered_event = false;
           handle_dungeon_input(buffered_event);
-          needs_redraw = true; // Player acted
+          needs_redraw = true;
         }
         else { has_buffered_event = false; }
       }
     }
 
-    // 3. Process Projectiles
     if (Systems::update_projectiles(reg, map, log, scripts.lua)) needs_redraw = true;
-
-    // 4. Process Monsters
     if (Systems::move_monsters(reg, map, log, scripts.lua)) needs_redraw = true;
 
-    // State Management
     if (reg.projectiles.empty())
     {
       if (state == game_state::Animating)
       {
         state = game_state::Dungeon;
-        needs_redraw = true; // State change implies redraw usually
+        needs_redraw = true;
       }
     }
     else { state = game_state::Animating; }
@@ -158,14 +145,12 @@ namespace roguey
     if (!reg.stats.contains(reg.player_id)) return;
     if (reg.stats[reg.player_id].hp <= 0) return;
 
-    // --- UI Keys (Immediate - No Cooldown - Add Debounce Lock) ---
     if (event == ftxui::Event::Character('q') || event == ftxui::Event::Character('Q'))
     {
       running = false;
       return;
     }
 
-    // Set menu_lock = 5 (approx 250ms) to prevent key repeat from immediately closing the menu
     if (event == ftxui::Event::Character('i'))
     {
       state = game_state::Inventory;
@@ -184,7 +169,6 @@ namespace roguey
       return;
     }
 
-    // --- Gameplay Cooldown & Buffering ---
     if (reg.stats[reg.player_id].action_timer > 0)
     {
       if (event.is_character() || event == ftxui::Event::ArrowUp || event == ftxui::Event::ArrowDown ||
@@ -252,9 +236,10 @@ namespace roguey
               return;
             }
 
-            scripts.load_script(reg.items[target].script);
-
-            if (scripts.lua["on_pick"](reg.stats[reg.player_id], log)) { inventory.push_back(reg.items[target]); }
+            if (Systems::execute_script(scripts.lua, reg.items[target].script, log))
+            {
+              if (scripts.lua["on_pick"](reg.stats[reg.player_id], log)) { inventory.push_back(reg.items[target]); }
+            }
             reg.destroy_entity(target);
           }
         }
@@ -309,7 +294,6 @@ namespace roguey
 
   void Game::handle_inventory_input(ftxui::Event event)
   {
-    // Check Lock
     if (menu_lock > 0) return;
 
     if (event == ftxui::Event::Escape || event == ftxui::Event::Character('i'))
@@ -327,7 +311,8 @@ namespace roguey
         if (idx < inventory.size())
         {
           auto& item = inventory[idx];
-          if (scripts.load_script(item.script))
+
+          if (Systems::execute_script(scripts.lua, item.script, log))
           {
             sol::protected_function on_use = scripts.lua["on_use"];
             auto use_res = on_use(reg.stats[reg.player_id], log);
@@ -371,7 +356,8 @@ namespace roguey
 
   void Game::spawn_item(int x, int y, std::string script_path)
   {
-    if (!scripts.load_script(script_path)) return;
+    if (!Systems::execute_script(scripts.lua, script_path, log)) return;
+
     EntityID id = reg.create_entity();
     reg.positions[id] = {x, y};
     sol::table data = scripts.lua["item_data"];
@@ -393,11 +379,7 @@ namespace roguey
   {
     if (debug_mode) { log.add("Spawning: " + script_path, "ui_emphasis"); }
 
-    if (!scripts.load_script(script_path))
-    {
-      if (debug_mode) log.add("Error loading: " + script_path, "ui_failure");
-      return false;
-    }
+    if (!Systems::execute_script(scripts.lua, script_path, log)) return false;
 
     EntityID id = reg.create_entity();
     reg.positions[id] = {x, y};
@@ -410,6 +392,7 @@ namespace roguey
     if (!result.valid())
     {
       sol::error err = result;
+      // Already logging generally, but this is a specific function call error
       if (debug_mode) log.add("Lua Error: " + std::string(err.what()), "ui_failure");
       reg.destroy_entity(id);
       return false;
@@ -455,7 +438,8 @@ namespace roguey
     reg.clear();
     state = game_state::Dungeon;
 
-    scripts.load_script(current_level_script);
+    Systems::execute_script(scripts.lua, current_level_script, log);
+
     sol::table config = scripts.lua["get_level_config"](depth);
 
     map.width = config["width"];
@@ -470,7 +454,8 @@ namespace roguey
 
     if (full_reset)
     {
-      scripts.load_script(reg.player_class_script);
+      Systems::execute_script(scripts.lua, reg.player_class_script, log);
+
       sol::protected_function init_func = scripts.lua["get_init_stats"];
       sol::table s = init_func();
       int delay = s.get_or("delay", 4);
