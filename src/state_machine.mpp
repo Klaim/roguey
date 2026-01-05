@@ -8,14 +8,7 @@
 
 export module roguey.state_machine;
 
-import std;
-import roguey.deps.ftxui;
-import roguey.states;
-
 namespace roguey
 {
-  class game; // export import?
-
-  export
 
 }

@@ -8,6 +8,7 @@
 module roguey.states;
 
 import roguey.game;
+import roguey.systems;
 
 namespace roguey
 {
