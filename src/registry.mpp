@@ -5,13 +5,12 @@
   SPDX-License-Identifier: MIT
 */
 //==================================================================================================
-#pragma once
-#include "types.hpp"
-#include <map>
-#include <string>
-#include <vector>
+export module roguey.registry;
 
-namespace roguey
+export import std;
+export import roguey.types;
+
+export namespace roguey
 {
   struct renderable
   {

@@ -5,13 +5,14 @@
   SPDX-License-Identifier: MIT
 */
 //==================================================================================================
-#pragma once
+module;
 #include <cassert>
-#include <cctype>
-#include <random>
-#include <string>
 
-namespace roguey
+export module roguey.dice;
+
+export import std; // note that this could not be exported, not sure which way is better
+
+export namespace roguey
 {
   // Parse a string containing a chain of dice spec and modifier
   // ie: D8, 1D6+2, 3D4-3, -5d6 + 2D10

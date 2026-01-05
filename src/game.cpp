@@ -5,13 +5,7 @@
   SPDX-License-Identifier: MIT
 */
 //==================================================================================================
-#include "dice.hpp"
-#include "game.hpp"
-#include <algorithm>
-#include <cctype>
-#include <filesystem>
-#include <map>
-#include <random>
+module roguey.game;
 
 namespace fs = std::filesystem;
 

@@ -5,13 +5,12 @@
   SPDX-License-Identifier: MIT
 */
 //==================================================================================================
-#pragma once
-#include "types.hpp"
-#include <random>
-#include <set>
-#include <vector>
+export module roguey.dungeon;
 
-namespace roguey
+export import std;
+export import roguey.types;
+
+export namespace roguey
 {
   class dungeon
   {

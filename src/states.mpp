@@ -1,0 +1,66 @@
+export module roguey.states;
+
+export import std;
+export import roguey.deps.ftxui;
+
+
+
+namespace roguey
+{
+    class game;
+}
+
+export namespace roguey
+{
+    struct dungeon_state
+    {
+        ftxui::Element render(game& g);
+        bool on_event(game& g, ftxui::Event event);
+    };
+
+    struct game_over_state
+    {
+        ftxui::Element render(game& g);
+        bool on_event(game& g, ftxui::Event event);
+    };
+
+    struct help_state
+    {
+        ftxui::Element render(game& g);
+        bool on_event(game& g, ftxui::Event event);
+    };
+
+    struct inventory_state
+    {
+        ftxui::Element render(game& g);
+        bool on_event(game& g, ftxui::Event event);
+    };
+    struct setup_state
+    {
+        ftxui::Element render(game& g);
+        bool on_event(game& g, ftxui::Event event);
+
+        int step = 0;
+        std::string input_buffer;
+        int class_selection = 0;
+    };
+
+    struct stats_state
+    {
+        ftxui::Element render(game& g);
+        bool on_event(game& g, ftxui::Event event);
+    };
+
+    struct tick_state
+    {
+        ftxui::Element render(game& g);
+        bool on_event(game& g, ftxui::Event event);
+    };
+
+    struct victory_state
+    {
+        ftxui::Element render(game& g);
+        bool on_event(game& g, ftxui::Event event);
+    };
+
+}

@@ -5,17 +5,28 @@
   SPDX-License-Identifier: MIT
 */
 //==================================================================================================
-#pragma once
-#include <ftxui/component/event.hpp>
-#include <ftxui/dom/elements.hpp>
+export module roguey.types:game;
 
-namespace roguey
+import std;
+
+export namespace roguey
 {
-  class game;
-
-  struct victory_state
+  enum class game_state
   {
-    ftxui::Element render(game& g);
-    bool on_event(game& g, ftxui::Event event);
+    Dungeon,
+    Inventory,
+    Stats,
+    Help,
+    GameOver,
+    Victory,
+    Animating
   };
+
+  struct SpeedThreshold
+  {
+    int limit;
+    std::string label;
+    std::string color;
+  };
+
 }

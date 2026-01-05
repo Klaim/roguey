@@ -4609,8 +4609,8 @@ namespace sol {
 namespace sol {
 
 	using in_place_t = std::in_place_t;
-	constexpr std::in_place_t in_place {};
-	constexpr std::in_place_t in_place_of {};
+	inline constexpr std::in_place_t in_place {};
+	inline constexpr std::in_place_t in_place_of {};
 
 	template <typename T>
 	using in_place_type_t = std::in_place_type_t<T>;

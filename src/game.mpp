@@ -5,19 +5,49 @@
   SPDX-License-Identifier: MIT
 */
 //==================================================================================================
-#pragma once
-#include "dungeon.hpp"
-#include "registry.hpp"
-#include "renderer.hpp"
-#include "script_engine.hpp"
-#include "state_machine.hpp"
-#include "systems.hpp"
-#include <ftxui/component/component.hpp>
-#include <random>
-#include <vector>
 
-namespace roguey
+export module roguey.game;
+
+export import roguey.dungeon;
+
+import std;
+import roguey.deps.ftxui;
+
+import roguey.registry;
+import roguey.renderer;
+import roguey.script_engine;
+import roguey.systems;
+import roguey.dice;
+import roguey.states;
+
+
+export namespace roguey
 {
+  class game;
+
+  class state_machine
+  {
+  public:
+    using state_variant = std::variant<setup_state,
+                                       dungeon_state,
+                                       inventory_state,
+                                       stats_state,
+                                       help_state,
+                                       tick_state,
+                                       game_over_state,
+                                       victory_state>;
+
+    state_machine(); // Initialize with default state (setup)
+
+    ftxui::Element render(game& g);
+    bool on_event(game& g, ftxui::Event event);
+
+    template<typename T> void transition_to(T&& new_state) { current_state = std::forward<T>(new_state); }
+
+  private:
+    state_variant current_state;
+  };
+
   class game
   {
   public:

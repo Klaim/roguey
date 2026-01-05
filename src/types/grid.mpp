@@ -5,10 +5,12 @@
   SPDX-License-Identifier: MIT
 */
 //==================================================================================================
-#pragma once
-#include <vector>
 
-namespace roguey
+export module roguey.types:grid;
+
+import std;
+
+export namespace roguey
 {
   template<typename Element> struct grid2D : private std::vector<Element>
   {

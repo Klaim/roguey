@@ -5,11 +5,10 @@
   SPDX-License-Identifier: MIT
 */
 //==================================================================================================
-#include "renderer.hpp"
-#include "systems.hpp"
-#include <algorithm>
-#include <cmath>
-#include <filesystem>
+module;
+#include <cassert>
+
+module roguey.systems;
 
 namespace roguey
 {

@@ -5,14 +5,7 @@
   SPDX-License-Identifier: MIT
 */
 //==================================================================================================
-#include "renderer.hpp"
-#include <algorithm>
-#include <chrono>
-#include <filesystem>
-#include <ftxui/dom/elements.hpp>
-#include <ftxui/screen/terminal.hpp>
-#include <iostream>
-#include <thread>
+module roguey.renderer;
 
 namespace roguey
 {

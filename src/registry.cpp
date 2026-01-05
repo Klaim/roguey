@@ -6,8 +6,7 @@
 */
 //==================================================================================================
 
-#include "registry.hpp"
-#include <algorithm>
+module roguey.registry;
 
 namespace roguey
 {

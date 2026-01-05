@@ -5,18 +5,18 @@
   SPDX-License-Identifier: MIT
 */
 //==================================================================================================
-#pragma once
-#include "dungeon.hpp"
-#include "registry.hpp"
-#include "script_engine.hpp"
-#include "systems.hpp"
-#include "types.hpp"
-#include <ftxui/dom/elements.hpp>
-#include <map>
-#include <string>
-#include <vector>
+export module roguey.renderer;
 
-namespace roguey
+import std;
+import roguey.deps.ftxui;
+import roguey.deps.sol;
+import roguey.types;
+import roguey.script_engine;
+import roguey.dungeon;
+import roguey.registry;
+import roguey.systems;
+
+export namespace roguey
 {
   class renderer
   {

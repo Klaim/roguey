@@ -5,9 +5,11 @@
   SPDX-License-Identifier: MIT
 */
 //==================================================================================================
-#include "game.hpp"
-#include "states/dungeon.hpp"
-#include "states/tick.hpp"
+module roguey.states;
+
+import roguey.deps.sol;
+
+import roguey.game;
 
 namespace roguey
 {

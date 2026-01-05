@@ -5,17 +5,17 @@
   SPDX-License-Identifier: MIT
 */
 //==================================================================================================
-#pragma once
-#include <ftxui/component/event.hpp>
-#include <ftxui/dom/elements.hpp>
+
+export module roguey.state_machine;
+
+import std;
+import roguey.deps.ftxui;
+import roguey.states;
 
 namespace roguey
 {
-  class game;
+  class game; // export import?
 
-  struct tick_state
-  {
-    ftxui::Element render(game& g);
-    bool on_event(game& g, ftxui::Event event);
-  };
+  export
+
 }

@@ -5,10 +5,12 @@
   SPDX-License-Identifier: MIT
 */
 //==================================================================================================
-#pragma once
-#include <string>
 
-namespace roguey
+export module roguey.types:items;
+
+import std;
+
+export namespace roguey
 {
   enum class item_type
   {

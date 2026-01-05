@@ -6,14 +6,12 @@
 */
 //==================================================================================================
 
-#include "game.hpp"
-#include <atomic>
-#include <filesystem>
-#include <ftxui/component/component.hpp>
-#include <ftxui/component/screen_interactive.hpp>
-#include <string>
-#include <thread>
-#include <vector>
+#include <cassert>
+
+import std;
+import roguey.deps.ftxui;
+import roguey.deps.sol;
+import roguey.game;
 
 int main(int argc, char* argv[])
 {

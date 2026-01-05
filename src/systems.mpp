@@ -5,15 +5,21 @@
   SPDX-License-Identifier: MIT
 */
 //==================================================================================================
-#pragma once
-#include "dungeon.hpp"
-#include "registry.hpp"
-#include <sol/sol.hpp>
-#include <string>
+export module roguey.systems;
+
+import std;
+import roguey.deps.sol;
+import roguey.dungeon;
+import roguey.registry;
 
 namespace roguey
 {
   class renderer;
+}
+
+
+export namespace roguey
+{
 
   struct message_log
   {

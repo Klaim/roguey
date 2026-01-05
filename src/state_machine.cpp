@@ -5,8 +5,7 @@
   SPDX-License-Identifier: MIT
 */
 //==================================================================================================
-#include "state_machine.hpp"
-#include <variant>
+module roguey.game;
 
 namespace roguey
 {

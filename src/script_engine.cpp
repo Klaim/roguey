@@ -5,9 +5,9 @@
   SPDX-License-Identifier: MIT
 */
 //==================================================================================================
-#include "script_engine.hpp"
-#include "systems.hpp"
-#include <filesystem>
+module roguey.script_engine;
+
+import roguey.systems;
 
 namespace roguey
 {

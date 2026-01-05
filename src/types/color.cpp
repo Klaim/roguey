@@ -5,12 +5,8 @@
   SPDX-License-Identifier: MIT
 */
 //==================================================================================================
-#include <ftxui/screen/color.hpp>
+module roguey.types;
 
-#include <cstdint>
-#include <ftxui/dom/elements.hpp>
-#include <sstream>
-#include <string>
 
 namespace roguey
 {

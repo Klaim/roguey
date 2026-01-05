@@ -5,11 +5,7 @@
   SPDX-License-Identifier: MIT
 */
 //==================================================================================================
-
-#include "dungeon.hpp"
-#include <algorithm>
-#include <cmath>
-#include <random>
+module roguey.dungeon;
 
 namespace roguey
 {

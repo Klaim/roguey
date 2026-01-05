@@ -5,12 +5,12 @@
   SPDX-License-Identifier: MIT
 */
 //==================================================================================================
-#pragma once
-#include <ftxui/dom/elements.hpp>
-#include <ftxui/screen/color.hpp>
-#include <string>
+export module roguey.types:color;
 
-namespace roguey
+import std;
+import roguey.deps.ftxui;
+
+export namespace roguey
 {
   struct theme_style
   {
